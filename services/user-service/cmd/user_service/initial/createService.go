@@ -18,7 +18,7 @@ func CreateServices() []app.IServer {
 
 	// auto migrate database tables
 	db := database.GetDB()
-	if err := db.AutoMigrate(&model.Users{}); err != nil {
+	if err := db.AutoMigrate(&model.Users{}, &model.OAuthClient{}); err != nil {
 		panic("auto migrate error: " + err.Error())
 	}
 

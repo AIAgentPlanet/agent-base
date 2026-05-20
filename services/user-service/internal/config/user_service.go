@@ -40,6 +40,7 @@ type Config struct {
 	Jaeger     Jaeger       `yaml:"jaeger" json:"jaeger"`
 	Logger     Logger       `yaml:"logger" json:"logger"`
 	NacosRd    NacosRd      `yaml:"nacosRd" json:"nacosRd"`
+	OAuth      OAuth        `yaml:"oauth" json:"oauth"`
 	Redis      Redis        `yaml:"redis" json:"redis"`
 }
 
@@ -185,4 +186,9 @@ type HTTP struct {
 	Port    int `yaml:"port" json:"port"`
 	Timeout int `yaml:"timeout" json:"timeout"`
 	TLS     TLS `yaml:"tls" json:"tls"`
+}
+
+type OAuth struct {
+	AccessTokenExpire  int `yaml:"accessTokenExpire" json:"accessTokenExpire"`
+	RefreshTokenExpire int `yaml:"refreshTokenExpire" json:"refreshTokenExpire"`
 }

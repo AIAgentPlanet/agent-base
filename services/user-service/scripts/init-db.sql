@@ -18,3 +18,20 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE INDEX IF NOT EXISTS idx_users_deleted_at ON users(deleted_at);
 CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
+
+CREATE TABLE IF NOT EXISTS oauth_clients (
+    id BIGSERIAL PRIMARY KEY,
+    client_id VARCHAR(128) NOT NULL UNIQUE,
+    client_secret VARCHAR(256) NOT NULL,
+    name VARCHAR(256) NOT NULL,
+    redirect_uris TEXT NOT NULL,
+    allowed_grants TEXT NOT NULL DEFAULT '["authorization_code"]',
+    allowed_scopes TEXT NOT NULL DEFAULT '["profile"]',
+    user_id BIGINT NOT NULL DEFAULT 0,
+    status INT NOT NULL DEFAULT 1,
+    created_at BIGINT NOT NULL DEFAULT 0,
+    updated_at BIGINT NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_oauth_clients_user_id ON oauth_clients(user_id);
+CREATE INDEX IF NOT EXISTS idx_oauth_clients_status ON oauth_clients(status);

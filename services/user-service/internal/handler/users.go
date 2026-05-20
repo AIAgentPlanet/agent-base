@@ -42,6 +42,16 @@ type UsersHandler interface {
 	UpdateProfile(c *gin.Context)
 	SendResetCode(c *gin.Context)
 	ResetPassword(c *gin.Context)
+
+	// OAuth related handlers
+	CreateOAuthClient(c *gin.Context)
+	ListOAuthClients(c *gin.Context)
+	UpdateOAuthClient(c *gin.Context)
+	DeleteOAuthClient(c *gin.Context)
+	OAuthAuthorize(c *gin.Context)
+	OAuthToken(c *gin.Context)
+	OAuthUserInfo(c *gin.Context)
+	OAuthRevoke(c *gin.Context)
 }
 
 type usersHandler struct {

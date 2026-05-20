@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-dev-frame/sponge/pkg/gin/middleware"
 
+	"agent-base/services/user-service/internal/config"
 	"agent-base/services/user-service/internal/handler"
 )
 
@@ -25,7 +26,7 @@ func usersRouter(group *gin.RouterGroup, h handler.UsersHandler) {
 
 	// Protected routes (JWT authentication required)
 	authGroup := g.Group("")
-	authGroup.Use(middleware.Auth())
+	authGroup.Use(middleware.Auth(middleware.WithSignKey([]byte(config.Get().JWT.Secret))))
 
 	authGroup.GET("/profile", h.GetProfile)
 	authGroup.PUT("/profile", h.UpdateProfile)
