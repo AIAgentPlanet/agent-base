@@ -1,0 +1,61 @@
+# If you need to convert YAML to a Go struct, please execute the command: make update-config
+
+# app settings
+app:
+  name: "user-service"
+  env: "dev"
+  version: "v0.0.1"
+  host: "127.0.0.1"
+  enableStat: true
+  enableMetrics: true
+  enableHTTPProfile: false
+  enableLimit: false
+  enableCircuitBreaker: false
+  enableTrace: false
+  tracingSamplingRate: 1.0
+  cacheType: "redis"
+
+# http server settings
+http:
+  port: 8080
+  timeout: 0
+  tls:
+    enableMode: ""
+    domain: ""
+    email: ""
+    certFile: ""
+    keyFile: ""
+
+# logger settings
+logger:
+  level: "info"
+  format: "console"
+  isSave: false
+
+# database setting
+database:
+  driver: "postgresql"
+  postgresql:
+    dsn: "postgres://postgres:postgres@127.0.0.1:5432/user_service?sslmode=disable"
+    enableLog: true
+    maxIdleConns: 10
+    maxOpenConns: 100
+    connMaxLifetime: 30
+
+# redis settings
+redis:
+  dsn: "default:@127.0.0.1:6379/0"
+  dialTimeout: 10
+  readTimeout: 2
+  writeTimeout: 2
+
+# jwt settings
+jwt:
+  secret: "user-service-jwt-secret-change-in-production"
+  issuer: "user-service"
+  expireHours: 24
+
+# jaeger settings
+jaeger:
+  agentHost: "127.0.0.1"
+  agentPort: 6831

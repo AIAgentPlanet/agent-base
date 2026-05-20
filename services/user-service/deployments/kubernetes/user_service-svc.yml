@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service-svc
+  namespace: agent-base
+spec:
+  selector:
+    app: user-service
+  type: ClusterIP
+  ports:
+    - name: user-service-svc-http-port
+      port: 8080
+      targetPort: 8080
+
