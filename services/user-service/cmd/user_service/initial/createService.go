@@ -16,10 +16,17 @@ func CreateServices() []app.IServer {
 	var cfg = config.Get()
 	var servers []app.IServer
 
-	// auto migrate database tables
+	// create database tables if not exist
 	db := database.GetDB()
-	if err := db.AutoMigrate(&model.Users{}, &model.OAuthClient{}); err != nil {
-		panic("auto migrate error: " + err.Error())
+	if !db.Migrator().HasTable(&model.Users{}) {
+		if err := db.Migrator().CreateTable(&model.Users{}); err != nil {
+			panic("create users table error: " + err.Error())
+		}
+	}
+	if !db.Migrator().HasTable(&model.OAuthClient{}) {
+		if err := db.Migrator().CreateTable(&model.OAuthClient{}); err != nil {
+			panic("create oauth_clients table error: " + err.Error())
+		}
 	}
 
 	// create a http service

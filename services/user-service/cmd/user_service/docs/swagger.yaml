@@ -1,0 +1,17 @@
+host: localhost:8080
+info:
+  contact: {}
+  description: http server api docs
+  title: user_service api docs
+  version: v1.0.0
+paths: {}
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: Type Bearer your-jwt-token to Value
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

@@ -1,0 +1,1165 @@
+definitions:
+  agent-base_services_user-service_internal_types.Column:
+    properties:
+      exp:
+        description: expressions, which default to = when the value is null, have
+          =, !=, >, >=, <, <=, like
+        type: string
+      logic:
+        description: logical type, default value is "and", support &, and, ||, or
+        type: string
+      name:
+        description: column name
+        type: string
+      value:
+        description: column value
+    type: object
+  agent-base_services_user-service_internal_types.Conditions:
+    properties:
+      columns:
+        description: columns info
+        items:
+          $ref: '#/definitions/agent-base_services_user-service_internal_types.Column'
+        type: array
+    type: object
+  agent-base_services_user-service_internal_types.CreateOAuthClientReply:
+    properties:
+      code:
+        type: integer
+      data:
+        properties:
+          client_id:
+            type: string
+          client_secret:
+            type: string
+          id:
+            type: integer
+        type: object
+      msg:
+        type: string
+    type: object
+  agent-base_services_user-service_internal_types.CreateOAuthClientRequest:
+    properties:
+      allowed_grants:
+        items:
+          type: string
+        type: array
+      allowed_scopes:
+        items:
+          type: string
+        type: array
+      name:
+        maxLength: 256
+        type: string
+      redirect_uris:
+        items:
+          type: string
+        minItems: 1
+        type: array
+    required:
+    - name
+    - redirect_uris
+    type: object
+  agent-base_services_user-service_internal_types.CreateUsersReply:
+    properties:
+      code:
+        description: return code
+        type: integer
+      data:
+        description: return data
+        properties:
+          id:
+            description: id
+            type: integer
+        type: object
+      msg:
+        description: return information description
+        type: string
+    type: object
+  agent-base_services_user-service_internal_types.CreateUsersRequest:
+    properties:
+      avatar:
+        type: string
+      email:
+        type: string
+      loginAt:
+        type: integer
+      nickname:
+        type: string
+      password:
+        type: string
+      phone:
+        type: string
+      status:
+        type: integer
+      username:
+        type: string
+    type: object
+  agent-base_services_user-service_internal_types.DeleteOAuthClientByIDReply:
+    properties:
+      code:
+        type: integer
+      data:
+        type: object
+      msg:
+        type: string
+    type: object
+  agent-base_services_user-service_internal_types.DeleteUsersByIDReply:
+    properties:
+      code:
+        description: return code
+        type: integer
+      data:
+        description: return data
+        type: object
+      msg:
+        description: return information description
+        type: string
+    type: object
+  agent-base_services_user-service_internal_types.DeleteUserssByIDsReply:
+    properties:
+      code:
+        description: return code
+        type: integer
+      data:
+        description: return data
+        type: object
+      msg:
+        description: return information description
+        type: string
+    type: object
+  agent-base_services_user-service_internal_types.DeleteUserssByIDsRequest:
+    properties:
+      ids:
+        description: id list
+        items:
+          type: integer
+        minItems: 1
+        type: array
+    type: object
+  agent-base_services_user-service_internal_types.GetUsersByConditionReply:
+    properties:
+      code:
+        description: return code
+        type: integer
+      data:
+        description: return data
+        properties:
+          users:
+            $ref: '#/definitions/agent-base_services_user-service_internal_types.UsersObjDetail'
+        type: object
+      msg:
+        description: return information description
+        type: string
+    type: object
+  agent-base_services_user-service_internal_types.GetUsersByIDReply:
+    properties:
+      code:
+        description: return code
+        type: integer
+      data:
+        description: return data
+        properties:
+          users:
+            $ref: '#/definitions/agent-base_services_user-service_internal_types.UsersObjDetail'
+        type: object
+      msg:
+        description: return information description
+        type: string
+    type: object
+  agent-base_services_user-service_internal_types.ListOAuthClientsReply:
+    properties:
+      code:
+        type: integer
+      data:
+        properties:
+          clients:
+            items:
+              $ref: '#/definitions/agent-base_services_user-service_internal_types.OAuthClientObjDetail'
+            type: array
+          total:
+            type: integer
+        type: object
+      msg:
+        type: string
+    type: object
+  agent-base_services_user-service_internal_types.ListOAuthClientsRequest:
+    properties:
+      columns:
+        description: not required
+        items:
+          $ref: '#/definitions/query.Column'
+        type: array
+      limit:
+        minimum: 1
+        type: integer
+      page:
+        minimum: 0
+        type: integer
+      size:
+        description: 'Deprecated: use Limit instead in sponge version v1.8.6, will
+          remove in the future'
+        type: integer
+      sort:
+        type: string
+    type: object
+  agent-base_services_user-service_internal_types.ListUserssByIDsReply:
+    properties:
+      code:
+        description: return code
+        type: integer
+      data:
+        description: return data
+        properties:
+          userss:
+            items:
+              $ref: '#/definitions/agent-base_services_user-service_internal_types.UsersObjDetail'
+            type: array
+        type: object
+      msg:
+        description: return information description
+        type: string
+    type: object
+  agent-base_services_user-service_internal_types.ListUserssByIDsRequest:
+    properties:
+      ids:
+        description: id list
+        items:
+          type: integer
+        minItems: 1
+        type: array
+    type: object
+  agent-base_services_user-service_internal_types.ListUserssReply:
+    properties:
+      code:
+        description: return code
+        type: integer
+      data:
+        description: return data
+        properties:
+          userss:
+            items:
+              $ref: '#/definitions/agent-base_services_user-service_internal_types.UsersObjDetail'
+            type: array
+        type: object
+      msg:
+        description: return information description
+        type: string
+    type: object
+  agent-base_services_user-service_internal_types.LoginReply:
+    properties:
+      code:
+        type: integer
+      data:
+        properties:
+          token:
+            type: string
+        type: object
+      msg:
+        type: string
+    type: object
+  agent-base_services_user-service_internal_types.LoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  agent-base_services_user-service_internal_types.OAuthClientObjDetail:
+    properties:
+      allowedGrants:
+        items:
+          type: string
+        type: array
+      allowedScopes:
+        items:
+          type: string
+        type: array
+      clientId:
+        type: string
+      createdAt:
+        type: integer
+      id:
+        type: integer
+      name:
+        type: string
+      redirectUris:
+        items:
+          type: string
+        type: array
+      status:
+        type: integer
+      updatedAt:
+        type: integer
+    type: object
+  agent-base_services_user-service_internal_types.OAuthRevokeReply:
+    properties:
+      code:
+        type: integer
+      data:
+        type: object
+      msg:
+        type: string
+    type: object
+  agent-base_services_user-service_internal_types.OAuthRevokeRequest:
+    properties:
+      token:
+        type: string
+      token_type_hint:
+        enum:
+        - access_token
+        - refresh_token
+        type: string
+    required:
+    - token
+    type: object
+  agent-base_services_user-service_internal_types.OAuthTokenReply:
+    properties:
+      code:
+        type: integer
+      data:
+        properties:
+          access_token:
+            type: string
+          expires_in:
+            type: integer
+          refresh_token:
+            type: string
+          scope:
+            type: string
+          token_type:
+            type: string
+        type: object
+      msg:
+        type: string
+    type: object
+  agent-base_services_user-service_internal_types.OAuthTokenRequest:
+    properties:
+      client_id:
+        type: string
+      client_secret:
+        type: string
+      code:
+        type: string
+      code_verifier:
+        type: string
+      grant_type:
+        enum:
+        - authorization_code
+        - refresh_token
+        type: string
+      redirect_uri:
+        type: string
+      refresh_token:
+        type: string
+    required:
+    - client_id
+    - client_secret
+    - grant_type
+    type: object
+  agent-base_services_user-service_internal_types.OAuthUserInfoReply:
+    properties:
+      code:
+        type: integer
+      data:
+        properties:
+          avatar:
+            type: string
+          email:
+            type: string
+          id:
+            type: integer
+          nickname:
+            type: string
+          phone:
+            type: string
+          username:
+            type: string
+        type: object
+      msg:
+        type: string
+    type: object
+  agent-base_services_user-service_internal_types.Params:
+    properties:
+      columns:
+        description: query conditions
+        items:
+          $ref: '#/definitions/agent-base_services_user-service_internal_types.Column'
+        type: array
+      limit:
+        description: lines per page
+        type: integer
+      page:
+        description: page number, starting from page 0
+        type: integer
+      sort:
+        description: sorted fields, multi-column sorting separated by commas
+        type: string
+    type: object
+  agent-base_services_user-service_internal_types.ProfileReply:
+    properties:
+      code:
+        type: integer
+      data:
+        properties:
+          users:
+            $ref: '#/definitions/agent-base_services_user-service_internal_types.UsersObjDetail'
+        type: object
+      msg:
+        type: string
+    type: object
+  agent-base_services_user-service_internal_types.RegisterReply:
+    properties:
+      code:
+        type: integer
+      data:
+        properties:
+          id:
+            type: integer
+        type: object
+      msg:
+        type: string
+    type: object
+  agent-base_services_user-service_internal_types.RegisterRequest:
+    properties:
+      email:
+        type: string
+      password:
+        maxLength: 64
+        minLength: 6
+        type: string
+      phone:
+        type: string
+      username:
+        maxLength: 32
+        minLength: 3
+        type: string
+    required:
+    - email
+    - password
+    - phone
+    - username
+    type: object
+  agent-base_services_user-service_internal_types.ResetPasswordReply:
+    properties:
+      code:
+        type: integer
+      data:
+        type: object
+      msg:
+        type: string
+    type: object
+  agent-base_services_user-service_internal_types.ResetPasswordRequest:
+    properties:
+      code:
+        type: string
+      email:
+        type: string
+      new_password:
+        maxLength: 64
+        minLength: 6
+        type: string
+      phone:
+        type: string
+    required:
+    - code
+    - new_password
+    type: object
+  agent-base_services_user-service_internal_types.SendResetCodeReply:
+    properties:
+      code:
+        type: integer
+      data:
+        type: object
+      msg:
+        type: string
+    type: object
+  agent-base_services_user-service_internal_types.SendResetCodeRequest:
+    properties:
+      email:
+        type: string
+      phone:
+        type: string
+    type: object
+  agent-base_services_user-service_internal_types.UpdateOAuthClientReply:
+    properties:
+      code:
+        type: integer
+      data:
+        type: object
+      msg:
+        type: string
+    type: object
+  agent-base_services_user-service_internal_types.UpdateOAuthClientRequest:
+    properties:
+      allowed_grants:
+        items:
+          type: string
+        type: array
+      allowed_scopes:
+        items:
+          type: string
+        type: array
+      name:
+        maxLength: 256
+        type: string
+      redirect_uris:
+        items:
+          type: string
+        minItems: 1
+        type: array
+      status:
+        enum:
+        - 1
+        - 2
+        type: integer
+    type: object
+  agent-base_services_user-service_internal_types.UpdateProfileRequest:
+    properties:
+      avatar:
+        maxLength: 512
+        type: string
+      email:
+        type: string
+      nickname:
+        maxLength: 64
+        type: string
+      phone:
+        type: string
+    type: object
+  agent-base_services_user-service_internal_types.UpdateUsersByIDReply:
+    properties:
+      code:
+        description: return code
+        type: integer
+      data:
+        description: return data
+        type: object
+      msg:
+        description: return information description
+        type: string
+    type: object
+  agent-base_services_user-service_internal_types.UpdateUsersByIDRequest:
+    properties:
+      avatar:
+        type: string
+      email:
+        type: string
+      id:
+        description: uint64 id
+        type: integer
+      loginAt:
+        type: integer
+      nickname:
+        type: string
+      password:
+        type: string
+      phone:
+        type: string
+      status:
+        type: integer
+      username:
+        type: string
+    type: object
+  agent-base_services_user-service_internal_types.UsersObjDetail:
+    properties:
+      avatar:
+        type: string
+      createdAt:
+        type: integer
+      email:
+        type: string
+      id:
+        description: convert to uint64 id
+        type: integer
+      loginAt:
+        type: integer
+      nickname:
+        type: string
+      phone:
+        type: string
+      status:
+        type: integer
+      updatedAt:
+        type: integer
+      username:
+        type: string
+    type: object
+  query.Column:
+    properties:
+      exp:
+        description: expressions, default value is "=", support =, !=, >, >=, <, <=,
+          like, in, notin, isnull, isnotnull
+        type: string
+      logic:
+        description: logical type, defaults to and when the value is null, with &(and),
+          ||(or)
+        type: string
+      name:
+        description: column name
+        type: string
+      value:
+        description: column value
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: http server api docs
+  title: user_service api docs
+  version: v1.0.0
+paths:
+  /api/v1/oauth/authorize:
+    get:
+      consumes:
+      - application/json
+      description: Initiate OAuth 2.0 authorization code flow, user must be logged
+        in
+      parameters:
+      - description: response type, must be 'code'
+        in: query
+        name: response_type
+        required: true
+        type: string
+      - description: client id
+        in: query
+        name: client_id
+        required: true
+        type: string
+      - description: redirect uri
+        in: query
+        name: redirect_uri
+        required: true
+        type: string
+      - description: requested scopes
+        in: query
+        name: scope
+        type: string
+      - description: state parameter
+        in: query
+        name: state
+        type: string
+      - description: PKCE code challenge
+        in: query
+        name: code_challenge
+        type: string
+      - description: 'PKCE code challenge method: plain or S256'
+        in: query
+        name: code_challenge_method
+        type: string
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: redirect to client redirect_uri with code
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: OAuth authorization endpoint
+      tags:
+      - oauth
+  /api/v1/oauth/clients:
+    post:
+      consumes:
+      - application/json
+      description: List all OAuth clients registered by current user
+      parameters:
+      - description: query parameters
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/agent-base_services_user-service_internal_types.ListOAuthClientsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agent-base_services_user-service_internal_types.ListOAuthClientsReply'
+      security:
+      - BearerAuth: []
+      summary: List OAuth clients
+      tags:
+      - oauth
+  /api/v1/oauth/clients/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an OAuth client by id
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agent-base_services_user-service_internal_types.DeleteOAuthClientByIDReply'
+      security:
+      - BearerAuth: []
+      summary: Delete OAuth client
+      tags:
+      - oauth
+    put:
+      consumes:
+      - application/json
+      description: Update OAuth client information
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: client information
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/agent-base_services_user-service_internal_types.UpdateOAuthClientRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agent-base_services_user-service_internal_types.UpdateOAuthClientReply'
+      security:
+      - BearerAuth: []
+      summary: Update OAuth client
+      tags:
+      - oauth
+  /api/v1/oauth/revoke:
+    post:
+      consumes:
+      - application/json
+      description: Revoke an access or refresh token
+      parameters:
+      - description: revoke request
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/agent-base_services_user-service_internal_types.OAuthRevokeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agent-base_services_user-service_internal_types.OAuthRevokeReply'
+      summary: OAuth revoke token endpoint
+      tags:
+      - oauth
+  /api/v1/oauth/token:
+    post:
+      consumes:
+      - application/json
+      description: Exchange authorization code for tokens or refresh tokens
+      parameters:
+      - description: token request
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/agent-base_services_user-service_internal_types.OAuthTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agent-base_services_user-service_internal_types.OAuthTokenReply'
+      summary: OAuth token endpoint
+      tags:
+      - oauth
+  /api/v1/oauth/userinfo:
+    get:
+      consumes:
+      - application/json
+      description: Get current user info using OAuth access token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agent-base_services_user-service_internal_types.OAuthUserInfoReply'
+      summary: OAuth userinfo endpoint
+      tags:
+      - oauth
+  /api/v1/users:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new users entity using the provided data in the request
+        body.
+      parameters:
+      - description: users information
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/agent-base_services_user-service_internal_types.CreateUsersRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agent-base_services_user-service_internal_types.CreateUsersReply'
+      security:
+      - BearerAuth: []
+      summary: Create a new users
+      tags:
+      - users
+  /api/v1/users/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a existing users identified by the given id in the path.
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agent-base_services_user-service_internal_types.DeleteUsersByIDReply'
+      security:
+      - BearerAuth: []
+      summary: Delete a users by id
+      tags:
+      - users
+    get:
+      consumes:
+      - application/json
+      description: Gets detailed information of a users specified by the given id
+        in the path.
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agent-base_services_user-service_internal_types.GetUsersByIDReply'
+      security:
+      - BearerAuth: []
+      summary: Get a users by id
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Updates the specified users by given id in the path, support partial
+        update.
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: users information
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/agent-base_services_user-service_internal_types.UpdateUsersByIDRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agent-base_services_user-service_internal_types.UpdateUsersByIDReply'
+      security:
+      - BearerAuth: []
+      summary: Update a users by id
+      tags:
+      - users
+  /api/v1/users/condition:
+    post:
+      consumes:
+      - application/json
+      description: Returns a single users that matches the specified filter conditions.
+      parameters:
+      - description: query condition
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/agent-base_services_user-service_internal_types.Conditions'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agent-base_services_user-service_internal_types.GetUsersByConditionReply'
+      security:
+      - BearerAuth: []
+      summary: Get a users by custom condition
+      tags:
+      - users
+  /api/v1/users/delete/ids:
+    post:
+      consumes:
+      - application/json
+      description: Deletes multiple users by a list of id
+      parameters:
+      - description: id array
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/agent-base_services_user-service_internal_types.DeleteUserssByIDsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agent-base_services_user-service_internal_types.DeleteUserssByIDsReply'
+      security:
+      - BearerAuth: []
+      summary: Batch delete users by ids
+      tags:
+      - users
+  /api/v1/users/list:
+    get:
+      consumes:
+      - application/json
+      description: Returns a paginated list of userss starting after a given last
+        id, useful for cursor-based pagination.
+      parameters:
+      - default: 0
+        description: last id, default is MaxInt32
+        in: query
+        name: lastID
+        type: integer
+      - default: 10
+        description: number per page
+        in: query
+        name: limit
+        type: integer
+      - default: -id
+        description: 'sort by column name of table, and the '
+        in: query
+        name: sort
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agent-base_services_user-service_internal_types.ListUserssReply'
+      security:
+      - BearerAuth: []
+      summary: Get a paginated list of userss by last id
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      description: Returns a paginated list of users based on query filters, including
+        page number and size.
+      parameters:
+      - description: query parameters
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/agent-base_services_user-service_internal_types.Params'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agent-base_services_user-service_internal_types.ListUserssReply'
+      security:
+      - BearerAuth: []
+      summary: Get a paginated list of userss by custom conditions
+      tags:
+      - users
+  /api/v1/users/list/ids:
+    post:
+      consumes:
+      - application/json
+      description: Returns a list of users that match the list of id.
+      parameters:
+      - description: id array
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/agent-base_services_user-service_internal_types.ListUserssByIDsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agent-base_services_user-service_internal_types.ListUserssByIDsReply'
+      security:
+      - BearerAuth: []
+      summary: Batch get users by ids
+      tags:
+      - users
+  /api/v1/users/login:
+    post:
+      consumes:
+      - application/json
+      description: Login with username and password, return JWT token
+      parameters:
+      - description: login credentials
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/agent-base_services_user-service_internal_types.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agent-base_services_user-service_internal_types.LoginReply'
+      summary: User login
+      tags:
+      - users
+  /api/v1/users/profile:
+    get:
+      consumes:
+      - application/json
+      description: Get current logged in user profile
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agent-base_services_user-service_internal_types.ProfileReply'
+      security:
+      - BearerAuth: []
+      summary: Get user profile
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Update current logged in user profile
+      parameters:
+      - description: profile information
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/agent-base_services_user-service_internal_types.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agent-base_services_user-service_internal_types.UpdateUsersByIDReply'
+      security:
+      - BearerAuth: []
+      summary: Update user profile
+      tags:
+      - users
+  /api/v1/users/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user with username, password, email and phone
+      parameters:
+      - description: registration information
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/agent-base_services_user-service_internal_types.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agent-base_services_user-service_internal_types.RegisterReply'
+      summary: User registration
+      tags:
+      - users
+  /api/v1/users/reset-code:
+    post:
+      consumes:
+      - application/json
+      description: Send verification code to user's email or phone for password reset
+      parameters:
+      - description: reset code request
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/agent-base_services_user-service_internal_types.SendResetCodeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agent-base_services_user-service_internal_types.SendResetCodeReply'
+      summary: Send reset code
+      tags:
+      - users
+  /api/v1/users/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Reset password using verification code sent to email or phone
+      parameters:
+      - description: reset password request
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/agent-base_services_user-service_internal_types.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/agent-base_services_user-service_internal_types.ResetPasswordReply'
+      summary: Reset password
+      tags:
+      - users
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: Type Bearer your-jwt-token to Value
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

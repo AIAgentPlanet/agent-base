@@ -1,0 +1,23 @@
+{
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "http server api docs",
+        "title": "user_service api docs",
+        "contact": {},
+        "version": "v1.0.0"
+    },
+    "host": "localhost:8080",
+    "paths": {},
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Type Bearer your-jwt-token to Value",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

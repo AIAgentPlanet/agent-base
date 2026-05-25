@@ -31,7 +31,7 @@ func (h *usersHandler) Register(c *gin.Context) {
 	form := &types.RegisterRequest{}
 	if err := c.ShouldBindJSON(form); err != nil {
 		logger.Warn("ShouldBindJSON error: ", logger.Err(err), middleware.GCtxRequestIDField(c))
-		response.Error(c, ecode.InvalidParams)
+		response.Error(c, ecode.InvalidParams.RewriteMsg(formatValidationError(err)))
 		return
 	}
 
@@ -114,7 +114,7 @@ func (h *usersHandler) Login(c *gin.Context) {
 	form := &types.LoginRequest{}
 	if err := c.ShouldBindJSON(form); err != nil {
 		logger.Warn("ShouldBindJSON error: ", logger.Err(err), middleware.GCtxRequestIDField(c))
-		response.Error(c, ecode.InvalidParams)
+		response.Error(c, ecode.InvalidParams.RewriteMsg(formatValidationError(err)))
 		return
 	}
 
@@ -215,7 +215,7 @@ func (h *usersHandler) UpdateProfile(c *gin.Context) {
 	form := &types.UpdateProfileRequest{}
 	if err := c.ShouldBindJSON(form); err != nil {
 		logger.Warn("ShouldBindJSON error: ", logger.Err(err), middleware.GCtxRequestIDField(c))
-		response.Error(c, ecode.InvalidParams)
+		response.Error(c, ecode.InvalidParams.RewriteMsg(formatValidationError(err)))
 		return
 	}
 
@@ -259,7 +259,7 @@ func (h *usersHandler) SendResetCode(c *gin.Context) {
 	form := &types.SendResetCodeRequest{}
 	if err := c.ShouldBindJSON(form); err != nil {
 		logger.Warn("ShouldBindJSON error: ", logger.Err(err), middleware.GCtxRequestIDField(c))
-		response.Error(c, ecode.InvalidParams)
+		response.Error(c, ecode.InvalidParams.RewriteMsg(formatValidationError(err)))
 		return
 	}
 
@@ -325,7 +325,7 @@ func (h *usersHandler) ResetPassword(c *gin.Context) {
 	form := &types.ResetPasswordRequest{}
 	if err := c.ShouldBindJSON(form); err != nil {
 		logger.Warn("ShouldBindJSON error: ", logger.Err(err), middleware.GCtxRequestIDField(c))
-		response.Error(c, ecode.InvalidParams)
+		response.Error(c, ecode.InvalidParams.RewriteMsg(formatValidationError(err)))
 		return
 	}
 
