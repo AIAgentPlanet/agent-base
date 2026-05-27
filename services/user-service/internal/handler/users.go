@@ -52,6 +52,15 @@ type UsersHandler interface {
 	OAuthToken(c *gin.Context)
 	OAuthUserInfo(c *gin.Context)
 	OAuthRevoke(c *gin.Context)
+
+	// ATH protocol handlers
+	ATHDiscovery(c *gin.Context)
+	ATHRegister(c *gin.Context)
+	ATHAgentStatus(c *gin.Context)
+	ATHAuthorize(c *gin.Context)
+	ATHToken(c *gin.Context)
+	ATHRevoke(c *gin.Context)
+	ATHProxy(c *gin.Context)
 }
 
 type usersHandler struct {

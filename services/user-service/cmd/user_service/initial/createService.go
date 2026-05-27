@@ -28,6 +28,11 @@ func CreateServices() []app.IServer {
 			panic("create oauth_clients table error: " + err.Error())
 		}
 	}
+	if !db.Migrator().HasTable(&model.ATHAgent{}) {
+		if err := db.Migrator().CreateTable(&model.ATHAgent{}); err != nil {
+			panic("create ath_agents table error: " + err.Error())
+		}
+	}
 
 	// create a http service
 	httpAddr := ":" + strconv.Itoa(cfg.HTTP.Port)

@@ -87,6 +87,42 @@ func GenerateOAuthToken(userID uint64, clientID string, scope string, tokenType 
 	return token.SignedString(secretKey)
 }
 
+// GenerateATHToken generates an ATH access/refresh token bound to (agent_id, user_id, scope).
+func GenerateATHToken(userID uint64, agentID string, clientID string, scope string, tokenType string, expireSeconds int) (string, error) {
+	now := time.Now()
+	claims := Claims{
+		UserID:   userID,
+		ClientID: clientID,
+		Scope:    scope,
+		Type:     "ath_" + tokenType,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        generateJTI(),
+			ExpiresAt: jwt.NewNumericDate(now.Add(time.Duration(expireSeconds) * time.Second)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
+			Issuer:    issuer,
+			Subject:   fmt.Sprintf("%d", userID),
+		},
+	}
+	// Store agent_id in Audience as a custom way to pass it
+	claims.Audience = jwt.ClaimStrings{agentID}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(secretKey)
+}
+
+// ParseATHToken parses and validates an ATH token, ensuring type starts with "ath_".
+func ParseATHToken(tokenString string) (*Claims, error) {
+	claims, err := parseToken(tokenString)
+	if err != nil {
+		return nil, err
+	}
+	if claims.Type == "" || (claims.Type != "ath_access" && claims.Type != "ath_refresh") {
+		return nil, fmt.Errorf("not an ATH token")
+	}
+	return claims, nil
+}
+
 // ParseOAuthToken parse and validate OAuth token, return full claims
 func ParseOAuthToken(tokenString string) (*Claims, error) {
 	return parseToken(tokenString)
@@ -111,6 +147,14 @@ func parseToken(tokenString string) (*Claims, error) {
 
 func generateJTI() string {
 	return fmt.Sprintf("%d-%d", time.Now().UnixNano(), randInt())
+}
+
+// GetAgentIDFromClaims extracts agent_id from the Audience field of ATH claims.
+func GetAgentIDFromClaims(claims *Claims) string {
+	if len(claims.Audience) > 0 {
+		return claims.Audience[0]
+	}
+	return ""
 }
 
 func randInt() int {

@@ -24,4 +24,14 @@ var (
 	ErrOAuthServerError        = errcode.NewError(oauthBaseCode+11, "oauth server error")
 	ErrOAuthClientExists       = errcode.NewError(oauthBaseCode+12, "oauth client already exists")
 	ErrOAuthRevokeFailed       = errcode.NewError(oauthBaseCode+13, "failed to revoke token")
+
+	// ATH protocol errors
+	ErrATHInvalidAttestation   = errcode.NewError(oauthBaseCode+20, "invalid agent attestation")
+	ErrATHAttestationExpired   = errcode.NewError(oauthBaseCode+21, "agent attestation expired")
+	ErrATHJTIReplay            = errcode.NewError(oauthBaseCode+22, "attestation jti replay detected")
+	ErrATHAgentNotFound        = errcode.NewError(oauthBaseCode+23, "ath agent not found")
+	ErrATHAgentDenied          = errcode.NewError(oauthBaseCode+24, "ath agent registration denied")
+	ErrATHSessionExpired       = errcode.NewError(oauthBaseCode+25, "ath session expired or invalid")
+	ErrATHInvalidProvider      = errcode.NewError(oauthBaseCode+26, "invalid provider")
+	ErrATHInvalidScope         = errcode.NewError(oauthBaseCode+27, "invalid or unauthorized scope")
 )
