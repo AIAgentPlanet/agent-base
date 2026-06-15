@@ -3,10 +3,11 @@ package ath
 import (
 	"context"
 	"crypto/ecdsa"
+	"crypto/rand"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/pem"
 	"fmt"
-	"math/rand"
 	"strings"
 	"time"
 
@@ -24,70 +25,106 @@ const (
 	sessionTTL        = 10 * time.Minute
 )
 
-var rnd = rand.New(rand.NewSource(time.Now().UnixNano()))
-
 // AttestationClaims represents the expected claims in an agent attestation JWT
 type AttestationClaims struct {
 	AgentID string `json:"agent_id,omitempty"`
 	jwt.RegisteredClaims
 }
 
-// VerifyAttestation verifies an ES256 attestation JWT against an agent's registered public key.
-// If agent is nil, it parses the JWT unverified to extract agent_id, and the caller must
-// look up the agent and call VerifyAttestation again with the agent.
-func VerifyAttestation(tokenString string, agent *model.ATHAgent) (*AttestationClaims, error) {
-	if agent == nil {
-		claims := &AttestationClaims{}
-		_, _, err := new(jwt.Parser).ParseUnverified(tokenString, claims)
-		if err != nil {
-			return nil, fmt.Errorf("invalid attestation format: %w", err)
-		}
-		return claims, nil
-	}
+type AttestationVerifier struct {
+	Resolver IdentityResolver
+	Now      func() time.Time
+}
 
+type VerifiedAttestation struct {
+	Claims       *AttestationClaims
+	Document     *IdentityDocument
+	PublicKeyPEM string
+	KeyID        string
+}
+
+func NewAttestationVerifier(resolver IdentityResolver) *AttestationVerifier {
+	return &AttestationVerifier{Resolver: resolver, Now: time.Now}
+}
+
+func (v *AttestationVerifier) VerifyRegistration(ctx context.Context, tokenString, agentID, audience string) (*VerifiedAttestation, error) {
+	if v.Resolver == nil {
+		return nil, fmt.Errorf("identity resolver is required")
+	}
+	kid, err := tokenKeyID(tokenString)
+	if err != nil {
+		return nil, err
+	}
+	document, err := v.Resolver.Resolve(ctx, agentID)
+	if err != nil {
+		return nil, fmt.Errorf("resolve agent identity: %w", err)
+	}
+	if err := document.Validate(agentID); err != nil {
+		return nil, err
+	}
+	publicKey, resolvedKid, err := document.VerificationKey(kid)
+	if err != nil {
+		return nil, err
+	}
+	claims, err := v.verifyWithKey(tokenString, publicKey, agentID, audience)
+	if err != nil {
+		return nil, err
+	}
+	publicKeyPEM, err := marshalECPublicKey(publicKey)
+	if err != nil {
+		return nil, err
+	}
+	return &VerifiedAttestation{
+		Claims: claims, Document: document, PublicKeyPEM: publicKeyPEM, KeyID: resolvedKid,
+	}, nil
+}
+
+func (v *AttestationVerifier) VerifyRegistered(tokenString string, agent *model.ATHAgent, audience string) (*AttestationClaims, error) {
+	if agent == nil {
+		return nil, fmt.Errorf("registered agent is required")
+	}
 	publicKey, err := parseECPublicKey(agent.PublicKey)
 	if err != nil {
 		return nil, fmt.Errorf("invalid agent public key: %w", err)
 	}
+	return v.verifyWithKey(tokenString, publicKey, agent.AgentID, audience)
+}
 
+func (v *AttestationVerifier) verifyWithKey(tokenString string, publicKey *ecdsa.PublicKey, agentID, audience string) (*AttestationClaims, error) {
 	claims := &AttestationClaims{}
-	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
+	parser := jwt.NewParser(
+		jwt.WithValidMethods([]string{jwt.SigningMethodES256.Alg()}),
+		jwt.WithAudience(audience),
+		jwt.WithIssuer(agentID),
+		jwt.WithExpirationRequired(),
+		jwt.WithIssuedAt(),
+		jwt.WithLeeway(time.Minute),
+	)
+	token, err := parser.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		return publicKey, nil
 	})
-	if err != nil {
+	if err != nil || !token.Valid {
 		return nil, fmt.Errorf("attestation verification failed: %w", err)
 	}
-	if !token.Valid {
-		return nil, fmt.Errorf("attestation token invalid")
+	now := time.Now()
+	if v.Now != nil {
+		now = v.Now()
 	}
-
-	// Validate freshness: iat must be within last 5 minutes
-	if claims.IssuedAt == nil {
-		return nil, fmt.Errorf("attestation missing iat")
+	if claims.IssuedAt == nil || now.Sub(claims.IssuedAt.Time) > attestationMaxAge {
+		return nil, fmt.Errorf("attestation is not fresh")
 	}
-	if time.Since(claims.IssuedAt.Time) > attestationMaxAge {
-		return nil, fmt.Errorf("attestation too old")
-	}
-	if claims.IssuedAt.Time.After(time.Now().Add(1 * time.Minute)) {
+	if claims.IssuedAt.Time.After(now.Add(time.Minute)) {
 		return nil, fmt.Errorf("attestation issued in the future")
 	}
-
-	// Validate jti presence
 	if claims.ID == "" {
 		return nil, fmt.Errorf("attestation missing jti")
 	}
-
-	// Validate sub matches agent_id
-	if claims.Subject == "" {
-		return nil, fmt.Errorf("attestation missing sub")
-	}
-	if claims.Subject != agent.AgentID {
+	if claims.Subject != agentID {
 		return nil, fmt.Errorf("attestation sub mismatch")
 	}
-
+	if claims.Issuer != agentID {
+		return nil, fmt.Errorf("attestation iss mismatch")
+	}
 	return claims, nil
 }
 
@@ -131,44 +168,60 @@ func GetSession(sessionID string, consume bool) (string, error) {
 	return val, nil
 }
 
+func DeleteSession(sessionID string) error {
+	if database.GetRedisCli() == nil {
+		return fmt.Errorf("redis is required for ath sessions")
+	}
+	return database.GetRedisCli().Del(context.Background(), sessionPrefix+sessionID).Err()
+}
+
 // GenerateClientID generates a random client id for ATH agents.
 func GenerateClientID() string {
-	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
-	b := make([]byte, 24)
-	for i := range b {
-		b[i] = chars[rnd.Intn(len(chars))]
-	}
-	return string(b)
+	return secureRandomString(24)
 }
 
 // GenerateClientSecret generates a random client secret for ATH agents.
 func GenerateClientSecret() string {
-	const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"
-	b := make([]byte, 48)
-	for i := range b {
-		b[i] = chars[rnd.Intn(len(chars))]
-	}
-	return string(b)
+	return secureRandomString(48)
 }
 
 // GenerateSessionID generates a random session id.
 func GenerateSessionID() string {
-	const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	b := make([]byte, 32)
-	for i := range b {
-		b[i] = chars[rnd.Intn(len(chars))]
-	}
-	return string(b)
+	return secureRandomString(32)
 }
 
 // GenerateState generates a random state parameter with at least 128 bits of entropy.
 func GenerateState() string {
-	const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	b := make([]byte, 32)
-	for i := range b {
-		b[i] = chars[rnd.Intn(len(chars))]
+	return secureRandomString(32)
+}
+
+func secureRandomString(byteCount int) string {
+	b := make([]byte, byteCount)
+	if _, err := rand.Read(b); err != nil {
+		panic(fmt.Sprintf("crypto/rand failed: %v", err))
 	}
-	return string(b)
+	return base64.RawURLEncoding.EncodeToString(b)
+}
+
+func tokenKeyID(tokenString string) (string, error) {
+	token, _, err := new(jwt.Parser).ParseUnverified(tokenString, &AttestationClaims{})
+	if err != nil {
+		return "", fmt.Errorf("invalid attestation format: %w", err)
+	}
+	alg, _ := token.Header["alg"].(string)
+	if alg != jwt.SigningMethodES256.Alg() {
+		return "", fmt.Errorf("attestation algorithm must be ES256")
+	}
+	kid, _ := token.Header["kid"].(string)
+	return kid, nil
+}
+
+func marshalECPublicKey(key *ecdsa.PublicKey) (string, error) {
+	der, err := x509.MarshalPKIXPublicKey(key)
+	if err != nil {
+		return "", fmt.Errorf("marshal public key: %w", err)
+	}
+	return string(pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: der})), nil
 }
 
 func parseECPublicKey(pemKey string) (*ecdsa.PublicKey, error) {

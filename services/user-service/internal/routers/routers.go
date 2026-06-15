@@ -22,7 +22,8 @@ import (
 )
 
 var (
-	apiV1RouterFns []func(r *gin.RouterGroup) // group router functions
+	apiV1RouterFns  []func(r *gin.RouterGroup) // group router functions
+	publicRouterFns []func(r *gin.Engine)
 	// if you have other group routes you can define them here
 	// example:
 	//     apiV2RouterFns []func(r *gin.RouterGroup)
@@ -97,6 +98,9 @@ func NewRouter() *gin.Engine {
 	r.GET("/health", handlerfunc.CheckHealth)
 	r.GET("/ping", handlerfunc.Ping)
 	r.GET("/codes", handlerfunc.ListCodes)
+	for _, fn := range publicRouterFns {
+		fn(r)
+	}
 
 	if config.Get().App.Env != "prod" {
 		r.GET("/config", gin.WrapF(errcode.ShowConfig([]byte(config.Show()))))

@@ -6,6 +6,8 @@ package initial
 import (
 	"flag"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/go-dev-frame/sponge/pkg/logger"
 	"github.com/go-dev-frame/sponge/pkg/stat"
@@ -13,7 +15,9 @@ import (
 
 	"agent-base/services/user-service/configs"
 	"agent-base/services/user-service/internal/config"
+	"agent-base/services/user-service/internal/dao"
 	"agent-base/services/user-service/internal/database"
+	"agent-base/services/user-service/internal/pkg/ath"
 	"agent-base/services/user-service/internal/pkg/code"
 	"agent-base/services/user-service/internal/pkg/jwt"
 )
@@ -27,6 +31,9 @@ var (
 func InitApp() {
 	initConfig()
 	cfg := config.Get()
+	if cfg.App.Env == "prod" && !strings.HasPrefix(cfg.ATH.BaseURL, "https://") {
+		panic("ath.baseURL must use https in production")
+	}
 
 	// initializing log
 	_, err := logger.Init(
@@ -44,7 +51,7 @@ func InitApp() {
 	if err != nil {
 		panic(err)
 	}
-	logger.Debug(config.Show())
+	logger.Debug(config.Show("jwt.secret", "ath.anchor.authToken", "ath.signingKeys.authToken"))
 	logger.Info("[logger] was initialized")
 
 	// initializing tracing
@@ -77,6 +84,64 @@ func InitApp() {
 	if cfg.App.CacheType != "" {
 		logger.Infof("[%s] was initialized", cfg.App.CacheType)
 	}
+
+	var signer *ath.ServerSigner
+	if len(cfg.ATH.SigningKeys) > 0 {
+		keys := make([]ath.SigningKeyConfig, 0, len(cfg.ATH.SigningKeys))
+		for _, key := range cfg.ATH.SigningKeys {
+			keys = append(keys, ath.SigningKeyConfig{
+				ID: key.ID, KeyFile: key.KeyFile,
+				PublicKeyFile:   key.PublicKeyFile,
+				SigningEndpoint: key.SigningEndpoint,
+				AuthToken:       key.AuthToken,
+			})
+		}
+		signer, err = ath.LoadServerKeyRing(
+			cfg.ATH.ServerDID, cfg.ATH.ActiveSigningKeyID, keys, cfg.App.Env != "prod",
+		)
+	} else {
+		signer, err = ath.LoadServerSigner(
+			cfg.ATH.ServerDID,
+			cfg.ATH.SigningKeyID,
+			cfg.ATH.SigningKeyFile,
+			cfg.App.Env != "prod",
+		)
+	}
+	if err != nil {
+		panic(err)
+	}
+	handshakeTTL := time.Duration(cfg.ATH.HandshakeTTL) * time.Second
+	handshakeService := ath.NewHandshakeService(
+		ath.NewRedisHandshakeStore(database.GetRedisCli()),
+		signer,
+		handshakeTTL,
+	)
+	sessionTTL := time.Duration(cfg.OAuth.AccessTokenExpire) * time.Second
+	handshakeService.SetSessionTTL(sessionTTL)
+	ath.SetDefaultHandshakeService(handshakeService)
+	ath.SetDefaultAuditService(ath.NewAuditService(
+		dao.NewATHAuditRecordDao(database.GetDB()),
+		signer,
+	))
+	var anchorClient ath.AnchorClient
+	if cfg.ATH.Anchor.Endpoint != "" {
+		anchorClient, err = ath.NewHTTPAnchorClient(
+			cfg.ATH.Anchor.Endpoint,
+			cfg.ATH.Anchor.AuthToken,
+			time.Duration(cfg.ATH.Anchor.TimeoutSeconds)*time.Second,
+			cfg.App.Env != "prod",
+		)
+		if err != nil {
+			panic(err)
+		}
+	}
+	ath.SetDefaultAnchorWorker(ath.NewAnchorWorker(
+		dao.NewATHAuditOutboxDao(database.GetDB()),
+		anchorClient,
+		time.Duration(cfg.ATH.Anchor.IntervalSeconds)*time.Second,
+		cfg.ATH.Anchor.BatchSize,
+	))
+	logger.Info("[ath handshake] was initialized")
 
 	// initializing jwt
 	jwt.SetConfig(cfg.JWT.Secret, cfg.JWT.Issuer, cfg.JWT.ExpireHours)

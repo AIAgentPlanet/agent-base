@@ -59,6 +59,22 @@ oauth:
   accessTokenExpire: 3600
   refreshTokenExpire: 2592000
 
+# ATH public gateway URL. Attestation aud claims must match endpoints under this URL.
+ath:
+  baseURL: "http://127.0.0.1:8080"
+  serverDID: "did:web:localhost%3A8080"
+  signingKeyFile: ""
+  signingKeyID: "did:web:localhost%3A8080#key-1"
+  activeSigningKeyID: ""
+  signingKeys: []
+  handshakeTTL: 600
+  anchor:
+    endpoint: ""
+    authToken: ""
+    intervalSeconds: 30
+    batchSize: 50
+    timeoutSeconds: 10
+
 # jaeger settings
 jaeger:
   agentHost: "127.0.0.1"

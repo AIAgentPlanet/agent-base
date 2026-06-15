@@ -30,6 +30,7 @@ func Set(conf *Config) {
 
 type Config struct {
 	App        App          `yaml:"app" json:"app"`
+	ATH        ATH          `yaml:"ath" json:"ath"`
 	Consul     Consul       `yaml:"consul" json:"consul"`
 	Database   Database     `yaml:"database" json:"database"`
 	Etcd       Etcd         `yaml:"etcd" json:"etcd"`
@@ -42,6 +43,33 @@ type Config struct {
 	NacosRd    NacosRd      `yaml:"nacosRd" json:"nacosRd"`
 	OAuth      OAuth        `yaml:"oauth" json:"oauth"`
 	Redis      Redis        `yaml:"redis" json:"redis"`
+}
+
+type ATH struct {
+	BaseURL            string          `yaml:"baseURL" json:"baseURL"`
+	ServerDID          string          `yaml:"serverDID" json:"serverDID"`
+	SigningKeyFile     string          `yaml:"signingKeyFile" json:"signingKeyFile"`
+	SigningKeyID       string          `yaml:"signingKeyID" json:"signingKeyID"`
+	SigningKeys        []ATHSigningKey `yaml:"signingKeys" json:"signingKeys"`
+	ActiveSigningKeyID string          `yaml:"activeSigningKeyID" json:"activeSigningKeyID"`
+	HandshakeTTL       int             `yaml:"handshakeTTL" json:"handshakeTTL"`
+	Anchor             ATHAnchor       `yaml:"anchor" json:"anchor"`
+}
+
+type ATHSigningKey struct {
+	ID              string `yaml:"id" json:"id"`
+	KeyFile         string `yaml:"keyFile" json:"keyFile"`
+	PublicKeyFile   string `yaml:"publicKeyFile" json:"publicKeyFile"`
+	SigningEndpoint string `yaml:"signingEndpoint" json:"signingEndpoint"`
+	AuthToken       string `yaml:"authToken" json:"authToken"`
+}
+
+type ATHAnchor struct {
+	Endpoint        string `yaml:"endpoint" json:"endpoint"`
+	AuthToken       string `yaml:"authToken" json:"authToken"`
+	IntervalSeconds int    `yaml:"intervalSeconds" json:"intervalSeconds"`
+	BatchSize       int    `yaml:"batchSize" json:"batchSize"`
+	TimeoutSeconds  int    `yaml:"timeoutSeconds" json:"timeoutSeconds"`
 }
 
 type Consul struct {

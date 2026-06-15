@@ -10,6 +10,7 @@ import (
 
 	"agent-base/services/user-service/internal/config"
 	"agent-base/services/user-service/internal/database"
+	"agent-base/services/user-service/internal/pkg/ath"
 )
 
 // Close releasing resources after service exit
@@ -19,6 +20,11 @@ func Close(servers []app.IServer) []app.Close {
 	// close server
 	for _, s := range servers {
 		closes = append(closes, s.Stop)
+	}
+
+	// stop anchor delivery before closing the database
+	if worker := ath.DefaultAnchorWorker(); worker != nil {
+		closes = append(closes, worker.Close)
 	}
 
 	// close database

@@ -17,6 +17,7 @@ import (
 	"agent-base/services/user-service/internal/database"
 	"agent-base/services/user-service/internal/ecode"
 	"agent-base/services/user-service/internal/model"
+	"agent-base/services/user-service/internal/pkg/ath"
 	"agent-base/services/user-service/internal/types"
 )
 
@@ -55,8 +56,17 @@ type UsersHandler interface {
 
 	// ATH protocol handlers
 	ATHDiscovery(c *gin.Context)
+	ATHServerIdentity(c *gin.Context)
 	ATHRegister(c *gin.Context)
 	ATHAgentStatus(c *gin.Context)
+	ATHStartHandshake(c *gin.Context)
+	ATHCompleteHandshake(c *gin.Context)
+	ATHHandshakeStatus(c *gin.Context)
+	ATHAuditQuery(c *gin.Context)
+	ATHAuditVerify(c *gin.Context)
+	ATHAuditHead(c *gin.Context)
+	ATHAnchorStatus(c *gin.Context)
+	ATHAnchorRetry(c *gin.Context)
 	ATHAuthorize(c *gin.Context)
 	ATHToken(c *gin.Context)
 	ATHRevoke(c *gin.Context)
@@ -64,7 +74,10 @@ type UsersHandler interface {
 }
 
 type usersHandler struct {
-	iDao dao.UsersDao
+	iDao                dao.UsersDao
+	attestationVerifier *ath.AttestationVerifier
+	handshakeService    *ath.HandshakeService
+	auditService        *ath.AuditService
 }
 
 // NewUsersHandler creating the handler interface
@@ -74,6 +87,9 @@ func NewUsersHandler() UsersHandler {
 			database.GetDB(), // db driver is sqlite
 			cache.NewUsersCache(database.GetCacheType()),
 		),
+		attestationVerifier: ath.NewAttestationVerifier(ath.NewHTTPIdentityResolver()),
+		handshakeService:    ath.DefaultHandshakeService(),
+		auditService:        ath.DefaultAuditService(),
 	}
 }
 
@@ -265,7 +281,7 @@ func (h *usersHandler) List(c *gin.Context) {
 
 	response.Success(c, gin.H{
 		"userss": data,
-		"total":        total,
+		"total":  total,
 	})
 }
 

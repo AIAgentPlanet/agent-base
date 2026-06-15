@@ -2,11 +2,11 @@ package oauth
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"strings"
 	"time"
 
@@ -23,10 +23,6 @@ const (
 	CodeTTL             = 5 * time.Minute
 	revokeAccessPrefix  = "oauth:revoke:access:"
 	revokeRefreshPrefix = "oauth:revoke:refresh:"
-)
-
-var (
-	rnd = rand.New(rand.NewSource(time.Now().UnixNano()))
 )
 
 // AuthorizationCode authorization code data
@@ -53,32 +49,29 @@ type TokenResponse struct {
 
 // GenerateCode generates a random authorization code
 func GenerateCode() string {
-	const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	b := make([]byte, 32)
-	for i := range b {
-		b[i] = chars[rnd.Intn(len(chars))]
+	if _, err := rand.Read(b); err != nil {
+		panic(fmt.Sprintf("crypto/rand failed: %v", err))
 	}
-	return string(b)
+	return base64.RawURLEncoding.EncodeToString(b)
 }
 
 // GenerateClientID generates a random client id
 func GenerateClientID() string {
-	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
 	b := make([]byte, 24)
-	for i := range b {
-		b[i] = chars[rnd.Intn(len(chars))]
+	if _, err := rand.Read(b); err != nil {
+		panic(fmt.Sprintf("crypto/rand failed: %v", err))
 	}
-	return string(b)
+	return base64.RawURLEncoding.EncodeToString(b)
 }
 
 // GenerateClientSecret generates a random client secret
 func GenerateClientSecret() string {
-	const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"
 	b := make([]byte, 48)
-	for i := range b {
-		b[i] = chars[rnd.Intn(len(chars))]
+	if _, err := rand.Read(b); err != nil {
+		panic(fmt.Sprintf("crypto/rand failed: %v", err))
 	}
-	return string(b)
+	return base64.RawURLEncoding.EncodeToString(b)
 }
 
 // SaveAuthorizationCode saves authorization code to redis

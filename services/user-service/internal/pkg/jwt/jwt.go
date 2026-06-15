@@ -1,6 +1,8 @@
 package jwt
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"time"
 
@@ -8,17 +10,21 @@ import (
 )
 
 var (
-	secretKey     = []byte("user-service-default-secret-key-change-me")
-	issuer        = "user-service"
-	expireHours   = 24
+	secretKey   = []byte("user-service-default-secret-key-change-me")
+	issuer      = "user-service"
+	expireHours = 24
 )
 
 // Claims custom JWT claims
 type Claims struct {
-	UserID   uint64 `json:"user_id"`
-	ClientID string `json:"client_id,omitempty"`
-	Scope    string `json:"scope,omitempty"`
-	Type     string `json:"type,omitempty"`
+	UserID      uint64 `json:"user_id"`
+	ClientID    string `json:"client_id,omitempty"`
+	AgentID     string `json:"agent_id,omitempty"`
+	ProviderID  string `json:"provider_id,omitempty"`
+	SessionID   string `json:"session_id,omitempty"`
+	HandshakeID string `json:"handshake_id,omitempty"`
+	Scope       string `json:"scope,omitempty"`
+	Type        string `json:"type,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -88,13 +94,17 @@ func GenerateOAuthToken(userID uint64, clientID string, scope string, tokenType 
 }
 
 // GenerateATHToken generates an ATH access/refresh token bound to (agent_id, user_id, scope).
-func GenerateATHToken(userID uint64, agentID string, clientID string, scope string, tokenType string, expireSeconds int) (string, error) {
+func GenerateATHToken(userID uint64, agentID string, clientID string, providerID string, sessionID string, handshakeID string, scope string, tokenType string, expireSeconds int) (string, error) {
 	now := time.Now()
 	claims := Claims{
-		UserID:   userID,
-		ClientID: clientID,
-		Scope:    scope,
-		Type:     "ath_" + tokenType,
+		UserID:      userID,
+		ClientID:    clientID,
+		AgentID:     agentID,
+		ProviderID:  providerID,
+		SessionID:   sessionID,
+		HandshakeID: handshakeID,
+		Scope:       scope,
+		Type:        "ath_" + tokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ID:        generateJTI(),
 			ExpiresAt: jwt.NewNumericDate(now.Add(time.Duration(expireSeconds) * time.Second)),
@@ -104,8 +114,7 @@ func GenerateATHToken(userID uint64, agentID string, clientID string, scope stri
 			Subject:   fmt.Sprintf("%d", userID),
 		},
 	}
-	// Store agent_id in Audience as a custom way to pass it
-	claims.Audience = jwt.ClaimStrings{agentID}
+	claims.Audience = jwt.ClaimStrings{providerID}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(secretKey)
@@ -146,17 +155,14 @@ func parseToken(tokenString string) (*Claims, error) {
 }
 
 func generateJTI() string {
-	return fmt.Sprintf("%d-%d", time.Now().UnixNano(), randInt())
+	b := make([]byte, 24)
+	if _, err := rand.Read(b); err != nil {
+		panic(fmt.Sprintf("crypto/rand failed: %v", err))
+	}
+	return base64.RawURLEncoding.EncodeToString(b)
 }
 
 // GetAgentIDFromClaims extracts agent_id from the Audience field of ATH claims.
 func GetAgentIDFromClaims(claims *Claims) string {
-	if len(claims.Audience) > 0 {
-		return claims.Audience[0]
-	}
-	return ""
-}
-
-func randInt() int {
-	return int(time.Now().UnixNano() % 1000000)
+	return claims.AgentID
 }
