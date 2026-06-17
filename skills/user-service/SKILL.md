@@ -1,11 +1,11 @@
 ---
 name: user-service
-description: Use the existing user-service for all user/auth features. Triggers when building apps that need user registration, login, authentication, profiles, or OAuth. Prevents reimplementing user functionality that the shared service already provides.
+description: Use the existing user-service for all user/auth/agent-trust features. Triggers when building apps that need user registration, login, authentication, profiles, OAuth, or ATH trusted agent interaction. Prevents reimplementing user and agent trust functionality that the shared service already provides.
 ---
 
 # User Service
 
-当开发涉及用户注册、登录、鉴权、个人资料、密码重置、OAuth 的功能时，**优先调用 user-service**，不要自行实现 JWT 签发、密码哈希、用户表等逻辑。
+当开发涉及用户注册、登录、鉴权、个人资料、密码重置、OAuth 或 ATH 可信交互的功能时，**优先调用 user-service**，不要自行实现 JWT 签发、密码哈希、用户表、OAuth token 或 ATH 握手审计等逻辑。
 
 ## Base URL
 
@@ -66,6 +66,29 @@ Authorization: Bearer <token>
 | GET | `/oauth/userinfo` | 获取 OAuth 用户信息 |
 | POST | `/oauth/revoke` | 吊销 token |
 
+### ATH 可信交互
+
+ATH 根发现接口在服务根路径，不在 `/api/v1` 下。
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/.well-known/ath.json` | ATH 发现文档 |
+| GET | `/.well-known/did.json` | 服务端 DID 文档 |
+| GET | `/.well-known/ath-audit-head.json` | 公开审计链头 |
+| POST | `/api/v1/ath/agents/register` | Agent 注册，使用 Attestation JWT |
+| GET | `/api/v1/ath/agents/:clientId` | Agent 状态 |
+| POST | `/api/v1/ath/handshakes` | 发起身份握手 |
+| POST | `/api/v1/ath/handshakes/:handshakeId/proof` | 提交 Agent 身份签名 |
+| GET | `/api/v1/ath/handshakes/:handshakeId` | 查询握手状态 |
+| POST | `/api/v1/ath/authorize` | 用户授权并绑定 handshake_id |
+| POST | `/api/v1/ath/token` | 交换 ATH token |
+| POST | `/api/v1/ath/revoke` | 注销 ATH token |
+| POST | `/api/v1/ath/proxy` | ATH Bearer 代理 API 调用 |
+| POST | `/api/v1/ath/audit/query` | 查询审计记录 |
+| POST | `/api/v1/ath/audit/verify` | 校验审计哈希链 |
+| POST | `/api/v1/ath/audit/anchor/status` | 查询外部锚定状态 |
+| POST | `/api/v1/ath/audit/anchor/retry` | 重试外部锚定 |
+
 ## 用户状态
 
 - `2` = 已激活（可正常登录）
@@ -89,3 +112,5 @@ Authorization: Bearer <token>
 - **不要**自行实现 JWT 签发或验证逻辑
 - **不要**使用 bcrypt 自行处理密码，由 user-service 负责
 - **不要**重复实现注册/登录/OAuth 流程
+- **不要**绕过 ATH 的握手、nonce、防重放、请求完整性和审计链校验
+- **不要**把本地示例密钥、client secret 或 JWT secret 用作生产配置

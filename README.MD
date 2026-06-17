@@ -38,9 +38,19 @@ agent-base/
 
 提供面向业务场景的提示词库和 AI 技能定义：
 
-- 覆盖常见开发场景的提示词模板，开箱即用
-- 标准化 Skill 接口，可直接集成到 Claude Code、Cursor 等 AI 开发工具
+- 覆盖既有网站接入、新站点开发、ATH 可信交互等场景的提示词模板
+- 标准化 Skill 接口，可直接集成到 Codex、Claude Code、Cursor 等 AI 开发工具
 - 支持团队自定义扩展，沉淀业务领域知识
+
+当前内置：
+
+| 类型 | 文件 | 说明 |
+|------|------|------|
+| Skill | `skills/agent-base/SKILL.md` | Agent Base 框架、prompt/skill、CLI/MCP 使用规则 |
+| Skill | `skills/user-service/SKILL.md` | 用户、鉴权、OAuth、ATH 接入规则 |
+| Prompt | `prompts/site-integration.md` | 既有网站接入 Agent Base |
+| Prompt | `prompts/new-agent-site.md` | 新建 AI 原生站点 |
+| Prompt | `prompts/ath-integration.md` | ATH 可信交互接入 |
 
 ### MCP Server & CLI
 
@@ -50,13 +60,36 @@ agent-base/
 - 提供 CLI 工具，支持在终端和 CI/CD 流程中调用
 - 低侵入接入，不依赖特定 AI 平台
 
+当前提供轻量只读工具层：
+
+```bash
+# 检查框架关键文件
+python3 cli/agent-base doctor
+
+# 输出 Agent Base 上下文
+python3 cli/agent-base context --format markdown
+
+# 查看 prompt 和 skill
+python3 cli/agent-base prompts list
+python3 cli/agent-base skills list
+
+# 查看 user-service / ATH 接口清单
+python3 cli/agent-base user-service endpoints
+python3 cli/agent-base user-service ath-endpoints
+
+# 启动 MCP stdio server
+python3 mcp/agent_base_mcp.py
+```
+
+MCP 当前暴露 `agent_base_context`、`list_prompts`、`read_prompt`、`list_skills`、`read_skill`、`user_service_endpoints` 和 `ath_endpoints` 等只读工具。完整 Agent Runtime、长期任务调度和可写 MCP 工具仍属于后续扩展。
+
 ### 基础代码库 (Services)
 
 经过验证的微服务模板，AI 基于此生成代码时风格一致、质量可控：
 
 | 模块 | 技术栈 | 说明 |
 |------|--------|------|
-| user-service | Go · Gin · PostgreSQL · Redis · JWT | 用户注册、登录、信息管理、OAuth |
+| user-service | Go · Gin · PostgreSQL · Redis · JWT · OAuth2 · ATH | 用户注册、登录、信息管理、OAuth、Agent 可信交互 |
 
 **技术选型**
 
@@ -64,6 +97,7 @@ agent-base/
 - 数据库：PostgreSQL（兼容 MySQL）
 - 缓存：Redis
 - 认证：JWT + bcrypt + OAuth2
+- Agent 可信交互：ATH（Agent Trust Handshake）
 - 文档：Swagger / OpenAPI
 
 ---
@@ -90,6 +124,16 @@ go run cmd/user_service/main.go -c configs/user_service.yml
 open http://localhost:8080/swagger/index.html
 ```
 
+### 使用 Agent Base 上下文工具
+
+```bash
+# 在仓库根目录执行
+python3 cli/agent-base doctor
+python3 cli/agent-base context --format json
+python3 cli/agent-base prompts show site-integration
+python3 cli/agent-base mcp config --format json
+```
+
 ### 示例请求
 
 ```bash
@@ -108,9 +152,11 @@ curl -X POST http://localhost:8080/api/v1/users/login \
 
 ## 路线图
 
-- [ ] 提示词库完善（覆盖更多业务场景）
-- [ ] MCP Server 核心实现
-- [ ] CLI 工具发布
+- [x] 提示词库初版（既有网站接入、新站点、ATH）
+- [x] MCP Server 只读上下文工具
+- [x] CLI 只读上下文工具
+- [ ] 可写 MCP 工具与认证审计
+- [ ] Agent Runtime 与任务管理
 - [ ] 更多基础服务模板（文件服务、消息通知、权限管理）
 - [ ] 多语言 SDK 支持
 

@@ -1,0 +1,226 @@
+#!/usr/bin/env python3
+import argparse
+import json
+import os
+import sys
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+PROMPTS_DIR = ROOT / "prompts"
+SKILLS_DIR = ROOT / "skills"
+
+
+USER_SERVICE_ENDPOINTS = [
+    ("POST", "/users/register", "用户注册", "public"),
+    ("POST", "/users/login", "用户登录，返回 JWT", "public"),
+    ("GET", "/users/profile", "当前用户资料", "jwt"),
+    ("PUT", "/users/profile", "更新当前用户资料", "jwt"),
+    ("POST", "/users/reset-code", "发送密码重置验证码", "public"),
+    ("POST", "/users/reset-password", "重置密码", "public"),
+    ("POST", "/users/", "创建用户", "jwt"),
+    ("GET", "/users/:id", "按 ID 查询用户", "jwt"),
+    ("PUT", "/users/:id", "按 ID 更新用户", "jwt"),
+    ("DELETE", "/users/:id", "按 ID 删除用户", "jwt"),
+    ("POST", "/users/list", "分页查询用户", "jwt"),
+    ("POST", "/oauth/clients", "创建 OAuth Client", "jwt"),
+    ("POST", "/oauth/clients/list", "列出 OAuth Client", "jwt"),
+    ("GET", "/oauth/authorize", "OAuth 授权端点", "jwt"),
+    ("POST", "/oauth/token", "OAuth token 端点", "public"),
+    ("GET", "/oauth/userinfo", "OAuth 用户信息", "oauth_bearer"),
+    ("POST", "/oauth/revoke", "OAuth token 吊销", "public"),
+]
+
+ATH_ENDPOINTS = [
+    ("GET", "/.well-known/ath.json", "ATH 发现文档", "public"),
+    ("GET", "/.well-known/did.json", "服务端 DID 文档", "public"),
+    ("GET", "/.well-known/ath-audit-head.json", "公开审计链头", "public"),
+    ("POST", "/api/v1/ath/agents/register", "Agent 注册", "attestation_jwt"),
+    ("GET", "/api/v1/ath/agents/:clientId", "Agent 状态", "attestation_jwt"),
+    ("POST", "/api/v1/ath/handshakes", "发起身份握手", "registered_agent"),
+    ("POST", "/api/v1/ath/handshakes/:handshakeId/proof", "提交身份签名", "es256_signature"),
+    ("GET", "/api/v1/ath/handshakes/:handshakeId", "握手状态", "client_id"),
+    ("POST", "/api/v1/ath/authorize", "用户授权绑定", "attestation_jwt"),
+    ("POST", "/api/v1/ath/token", "ATH token 交换", "client_secret"),
+    ("POST", "/api/v1/ath/revoke", "ATH token 注销", "client_secret"),
+    ("POST", "/api/v1/ath/proxy", "ATH API 代理", "ath_bearer"),
+    ("POST", "/api/v1/ath/audit/query", "审计记录查询", "client_secret"),
+    ("POST", "/api/v1/ath/audit/verify", "审计链校验", "client_secret"),
+    ("POST", "/api/v1/ath/audit/anchor/status", "锚定状态", "client_secret"),
+    ("POST", "/api/v1/ath/audit/anchor/retry", "锚定重试", "client_secret"),
+]
+
+
+def read_text(path):
+    return path.read_text(encoding="utf-8")
+
+
+def list_markdown_files(directory):
+    if not directory.exists():
+        return []
+    return sorted(path for path in directory.rglob("*.md") if path.is_file())
+
+
+def prompt_path(name):
+    candidate = PROMPTS_DIR / f"{name}.md"
+    if candidate.exists():
+        return candidate
+    raise SystemExit(f"Unknown prompt: {name}")
+
+
+def skill_path(name):
+    candidate = SKILLS_DIR / name / "SKILL.md"
+    if candidate.exists():
+        return candidate
+    raise SystemExit(f"Unknown skill: {name}")
+
+
+def print_table(rows):
+    for row in rows:
+        print("\t".join(row))
+
+
+def command_doctor(_args):
+    checks = [
+        ("AGENT.md", ROOT / "AGENT.md"),
+        ("README.MD", ROOT / "README.MD"),
+        ("prompts", PROMPTS_DIR),
+        ("skills/agent-base", SKILLS_DIR / "agent-base" / "SKILL.md"),
+        ("skills/user-service", SKILLS_DIR / "user-service" / "SKILL.md"),
+        ("mcp/agent_base_mcp.py", ROOT / "mcp" / "agent_base_mcp.py"),
+        ("services/user-service", ROOT / "services" / "user-service"),
+    ]
+    failed = False
+    for label, path in checks:
+        ok = path.exists()
+        failed = failed or not ok
+        print(f"{'OK' if ok else 'MISSING'}\t{label}\t{path.relative_to(ROOT)}")
+    raise SystemExit(1 if failed else 0)
+
+
+def build_context():
+    return {
+        "name": "agent-base",
+        "root": str(ROOT),
+        "implemented": [
+            "user-service: users, JWT, OAuth 2.0, ATH",
+            "prompts: reusable task templates",
+            "skills: agent-base and user-service guidance",
+            "cli: read-only local context tool",
+            "mcp: read-only stdio context server",
+        ],
+        "not_yet_runtime": [
+            "general Agent Runtime",
+            "long-running task scheduler",
+            "state-changing MCP tools",
+            "multi-agent orchestration",
+        ],
+        "entrypoints": {
+            "agent_instructions": "AGENT.md",
+            "agent_base_skill": "skills/agent-base/SKILL.md",
+            "user_service_skill": "skills/user-service/SKILL.md",
+            "user_service": "services/user-service",
+            "mcp": "mcp/agent_base_mcp.py",
+        },
+        "prompts": [path.stem for path in list_markdown_files(PROMPTS_DIR) if path.name != "README.md"],
+    }
+
+
+def command_context(args):
+    context = build_context()
+    if args.format == "json":
+        print(json.dumps(context, ensure_ascii=False, indent=2))
+        return
+    print("# Agent Base Context")
+    print()
+    print("## Implemented")
+    for item in context["implemented"]:
+        print(f"- {item}")
+    print()
+    print("## Not Full Runtime")
+    for item in context["not_yet_runtime"]:
+        print(f"- {item}")
+    print()
+    print("## Entrypoints")
+    for key, value in context["entrypoints"].items():
+        print(f"- {key}: `{value}`")
+    print()
+    print("## Prompts")
+    for name in context["prompts"]:
+        print(f"- {name}")
+
+
+def command_prompts(args):
+    if args.prompt_command == "list":
+        for path in list_markdown_files(PROMPTS_DIR):
+            if path.name != "README.md":
+                print(path.stem)
+        return
+    print(read_text(prompt_path(args.name)))
+
+
+def command_skills(args):
+    if args.skill_command == "list":
+        for path in sorted(SKILLS_DIR.glob("*/SKILL.md")):
+            print(path.parent.name)
+        return
+    print(read_text(skill_path(args.name)))
+
+
+def command_user_service(args):
+    rows = USER_SERVICE_ENDPOINTS if args.endpoint_group == "endpoints" else ATH_ENDPOINTS
+    print_table(rows)
+
+
+def command_mcp(args):
+    command = [sys.executable, str(ROOT / "mcp" / "agent_base_mcp.py")]
+    if args.format == "json":
+        print(json.dumps({"command": command[0], "args": command[1:]}, ensure_ascii=False, indent=2))
+        return
+    print("command:", command[0])
+    print("args:", " ".join(command[1:]))
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(prog="agent-base", description="Agent Base local context CLI")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    doctor = subparsers.add_parser("doctor", help="check required Agent Base files")
+    doctor.set_defaults(func=command_doctor)
+
+    context = subparsers.add_parser("context", help="print Agent Base context")
+    context.add_argument("--format", choices=["markdown", "json"], default="markdown")
+    context.set_defaults(func=command_context)
+
+    prompts = subparsers.add_parser("prompts", help="list or show prompt templates")
+    prompt_sub = prompts.add_subparsers(dest="prompt_command", required=True)
+    prompt_sub.add_parser("list", help="list prompts")
+    prompt_show = prompt_sub.add_parser("show", help="show a prompt")
+    prompt_show.add_argument("name")
+    prompts.set_defaults(func=command_prompts)
+
+    skills = subparsers.add_parser("skills", help="list or show skills")
+    skill_sub = skills.add_subparsers(dest="skill_command", required=True)
+    skill_sub.add_parser("list", help="list skills")
+    skill_show = skill_sub.add_parser("show", help="show a skill")
+    skill_show.add_argument("name")
+    skills.set_defaults(func=command_skills)
+
+    user_service = subparsers.add_parser("user-service", help="show user-service endpoint catalog")
+    user_sub = user_service.add_subparsers(dest="endpoint_group", required=True)
+    user_sub.add_parser("endpoints", help="show user and OAuth endpoints")
+    user_sub.add_parser("ath-endpoints", help="show ATH endpoints")
+    user_service.set_defaults(func=command_user_service)
+
+    mcp = subparsers.add_parser("mcp", help="print MCP server config")
+    mcp_sub = mcp.add_subparsers(dest="mcp_command", required=True)
+    mcp_config = mcp_sub.add_parser("config", help="print stdio server command")
+    mcp_config.add_argument("--format", choices=["text", "json"], default="text")
+    mcp.set_defaults(func=command_mcp)
+
+    args = parser.parse_args(argv)
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()

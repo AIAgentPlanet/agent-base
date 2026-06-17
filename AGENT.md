@@ -1,6 +1,6 @@
 # Agent Base 智能体说明
 
-本文件是当前仓库给 AI 智能体使用的总控说明。当前阶段只围绕 `user-service` 展开，用于指导智能体在改造已有网站或创建新网站时，优先复用底座中的用户、鉴权和 OAuth 能力。
+本文件是当前仓库给 AI 智能体使用的总控说明，用于指导智能体理解 Agent Base 的能力边界、复用现有服务，并通过 prompts、skills、CLI 和 MCP 获取任务上下文。
 
 ## 1. 当前可用底座能力
 
@@ -21,12 +21,21 @@ services/user-service
 - 用户 CRUD
 - OAuth Client 管理
 - OAuth 授权、token、userinfo、revoke
+- ATH（Agent Trust Handshake）可信交互、审计链、外部锚定和 M5 密钥轮换
 
 当任务涉及用户体系、登录态、权限校验、用户资料、密码重置或 OAuth 时，智能体必须优先阅读并遵循：
 
 ```text
 skills/user-service/SKILL.md
 ```
+
+当任务涉及 Agent Base 框架本身、站点接入规划、prompt/skill 编排、CLI/MCP 使用方式时，智能体应优先阅读并遵循：
+
+```text
+skills/agent-base/SKILL.md
+```
+
+可复用提示词模板位于 `prompts/`。本地工具入口位于 `cli/agent-base` 和 `mcp/agent_base_mcp.py`。
 
 ## 2. 智能体工作原则
 
@@ -35,6 +44,9 @@ skills/user-service/SKILL.md
 3. 需要了解接口路径、鉴权方式、响应格式和禁止事项时，以 `skills/user-service/SKILL.md` 为准。
 4. 需要修改 `user-service` 本身时，优先保持现有 Go/Sponge/Gin/GORM 分层结构。
 5. 新增功能应尽量保持在现有目录边界内：`routers` 负责路由，`handler` 负责 HTTP 处理，`dao` 负责数据访问，`model` 负责数据模型，`types` 负责请求响应结构。
+6. 需要生成任务上下文、查看 prompt、列出接口或检查底座状态时，优先使用 `cli/agent-base`。
+7. 需要让外部 Agent 通过标准协议读取上下文时，优先使用 `mcp/agent_base_mcp.py`。
+8. 明确区分“已实现能力”和“规划能力”：已实现能力可直接调用；规划能力只作为设计约束，不应假装已经可用。
 
 ## 3. 任务类型判断
 
@@ -49,7 +61,7 @@ skills/user-service/SKILL.md
 5. 后端受保护接口应校验来自 `user-service` 的 JWT。
 6. 需要第三方应用授权时，使用 `user-service` 的 OAuth 能力。
 
-当前阶段不要假设仓库已经存在通用 MCP、CLI 或完整 Agent Runtime。若任务需要这些能力，应先说明当前底座尚未落地，并围绕 `user-service` 完成可实现部分。
+当前阶段已提供轻量 CLI 与 MCP stdio 服务器，用于暴露仓库上下文、prompt、skill 和 user-service/ATH 接口清单；它们不是完整 Agent Runtime，也不负责长期任务调度或多 Agent 编排。
 
 ### 3.2 快速开发具备用户能力的新网站或站点
 
@@ -117,13 +129,32 @@ http://localhost:8080/api/v1
 - 不要把示例 JWT secret 用于生产环境。
 - 不要在未确认生产环境配置的情况下暴露 `/config` 等调试接口。
 
-## 7. 后续扩展方向
+## 7. CLI 与 MCP 使用规则
 
-当前 `AGENT.md` 只统筹 `user-service`。当底座继续演进时，可以再补充：
+CLI 用于本地和 CI 场景：
+
+```bash
+python3 cli/agent-base doctor
+python3 cli/agent-base context --format markdown
+python3 cli/agent-base prompts list
+python3 cli/agent-base user-service endpoints
+```
+
+MCP stdio 服务器用于外部 Agent 读取 Agent Base 能力上下文：
+
+```bash
+python3 mcp/agent_base_mcp.py
+```
+
+MCP 当前暴露的工具包括 `agent_base_context`、`list_prompts`、`read_prompt`、`list_skills`、`read_skill`、`user_service_endpoints` 和 `ath_endpoints`。
+
+## 8. 后续扩展方向
+
+当前 `AGENT.md` 统筹已落地的 `user-service`、ATH、prompts、skills、CLI 和 MCP 轻量入口。后续可以继续补充：
 
 - `skills/agent-integration/SKILL.md`：指导已有网站接入完整 Agent 能力。
 - `skills/agent-site/SKILL.md`：指导快速生成具备 Agent 能力的新站点。
-- `mcp/`：提供 MCP Server，让智能体通过标准协议调用底座能力。
-- `cli/`：提供命令行工具，用于本地、CI/CD 或脚本化调用。
+- 更完整的 MCP Server：支持安全调用服务能力、任务状态查询和审计事件查询。
+- 更完整的 CLI：支持配置初始化、Agent 注册辅助、ATH 握手调试和 CI 检查。
 
-在这些能力落地前，智能体应明确区分“当前已实现的 user-service 能力”和“规划中的 Agent/MCP/CLI 能力”。
+在这些能力完整落地前，智能体应明确区分“当前已实现的轻量工具层”和“规划中的完整 Agent Runtime”。
