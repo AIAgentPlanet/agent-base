@@ -35,5 +35,6 @@ func athRouter(group *gin.RouterGroup, h handler.UsersHandler) {
 	athGroup.POST("/authorize", h.ATHAuthorize)
 	athGroup.POST("/token", h.ATHToken)
 	athGroup.POST("/revoke", h.ATHRevoke)
+	athGroup.POST("/introspect", h.ATHIntrospect)
 	athGroup.POST("/proxy", h.ATHProxy)
 }

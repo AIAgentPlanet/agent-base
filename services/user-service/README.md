@@ -50,6 +50,7 @@
 | 用户授权 | POST /api/v1/ath/authorize | Attestation JWT |
 | Token 交换 | POST /api/v1/ath/token | Client Secret |
 | Token 注销 | POST /api/v1/ath/revoke | Client Secret |
+| Token 状态查询 | POST /api/v1/ath/introspect | Client Secret |
 | API 代理 | POST /api/v1/ath/proxy | ATH Bearer |
 | 审计记录查询 | POST /api/v1/ath/audit/query | Client Secret |
 | 审计链校验 | POST /api/v1/ath/audit/verify | Client Secret |

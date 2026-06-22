@@ -37,6 +37,18 @@ skills/agent-base/SKILL.md
 
 可复用提示词模板位于 `prompts/`。本地工具入口位于 `cli/agent-base` 和 `mcp/agent_base_mcp.py`。
 
+外部个人 agent 接入与多 agent session 编排的通用契约位于：
+
+```text
+specs/agent-runtime/
+```
+
+外部 agent runtime MVP 服务位于：
+
+```text
+services/agent-service
+```
+
 ## 2. 智能体工作原则
 
 1. 不要重复实现 `users` 表、`oauth_clients` 表、JWT 签发、JWT 校验、bcrypt 密码哈希、注册登录或 OAuth 流程。
@@ -47,6 +59,7 @@ skills/agent-base/SKILL.md
 6. 需要生成任务上下文、查看 prompt、列出接口或检查底座状态时，优先使用 `cli/agent-base`。
 7. 需要让外部 Agent 通过标准协议读取上下文时，优先使用 `mcp/agent_base_mcp.py`。
 8. 明确区分“已实现能力”和“规划能力”：已实现能力可直接调用；规划能力只作为设计约束，不应假装已经可用。
+9. 设计 Hermes、OpenClaw 或其他个人 agent 产品时，优先使用 `specs/agent-runtime/` 的通用 Session、Gateway、MCP tools 契约；业务场景应作为 plugin，不要写死在连接层。
 
 ## 3. 任务类型判断
 
@@ -148,13 +161,27 @@ python3 mcp/agent_base_mcp.py
 
 MCP 当前暴露的工具包括 `agent_base_context`、`list_prompts`、`read_prompt`、`list_skills`、`read_skill`、`user_service_endpoints` 和 `ath_endpoints`。
 
+通用 agent runtime 契约可通过 CLI 查看：
+
+```bash
+python3 cli/agent-base runtime connection-modes
+python3 cli/agent-base runtime session-types
+python3 cli/agent-base runtime tools
+python3 cli/agent-base runtime show connection-gateway
+python3 cli/agent-base agent-service endpoints
+```
+
+MCP 也提供 `agent_runtime_discover`、`list_connection_modes`、`list_session_types`、`list_runtime_tools`、`read_runtime_spec` 和 `agent_service_endpoints` 等只读工具。
+
 ## 8. 后续扩展方向
 
-当前 `AGENT.md` 统筹已落地的 `user-service`、ATH、prompts、skills、CLI 和 MCP 轻量入口。后续可以继续补充：
+当前 `AGENT.md` 统筹已落地的 `user-service`、`agent-service` MVP、ATH、prompts、skills、CLI、MCP 轻量入口和通用 agent runtime 契约。后续可以继续补充：
 
 - `skills/agent-integration/SKILL.md`：指导已有网站接入完整 Agent 能力。
 - `skills/agent-site/SKILL.md`：指导快速生成具备 Agent 能力的新站点。
-- 更完整的 MCP Server：支持安全调用服务能力、任务状态查询和审计事件查询。
-- 更完整的 CLI：支持配置初始化、Agent 注册辅助、ATH 握手调试和 CI 检查。
+- 生产版 Agent Gateway：支持 HTTPS webhook、WebSocket、Remote MCP、投递 ack、重试和心跳。
+- 生产版 Agent MCP Server：支持 ATH/session token 校验后的可写工具。
+- Session Orchestrator：支持持久化 turn 调度、策略插件和审计绑定。
+- Debate Plugin：作为第一个业务插件验证 Hermes/OpenClaw 接入。
 
 在这些能力完整落地前，智能体应明确区分“当前已实现的轻量工具层”和“规划中的完整 Agent Runtime”。

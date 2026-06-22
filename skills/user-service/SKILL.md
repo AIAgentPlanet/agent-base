@@ -83,6 +83,7 @@ ATH 根发现接口在服务根路径，不在 `/api/v1` 下。
 | POST | `/api/v1/ath/authorize` | 用户授权并绑定 handshake_id |
 | POST | `/api/v1/ath/token` | 交换 ATH token |
 | POST | `/api/v1/ath/revoke` | 注销 ATH token |
+| POST | `/api/v1/ath/introspect` | 查询 ATH token active 状态和绑定 claims |
 | POST | `/api/v1/ath/proxy` | ATH Bearer 代理 API 调用 |
 | POST | `/api/v1/ath/audit/query` | 查询审计记录 |
 | POST | `/api/v1/ath/audit/verify` | 校验审计哈希链 |

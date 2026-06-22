@@ -183,6 +183,30 @@ type ATHRevokeRequest struct {
 	ClientSecret  string `json:"client_secret" binding:"required"`
 }
 
+type ATHIntrospectRequest struct {
+	Token         string `json:"token" binding:"required"`
+	TokenTypeHint string `json:"token_type_hint,omitempty"`
+	ClientID      string `json:"client_id" binding:"required"`
+	ClientSecret  string `json:"client_secret" binding:"required"`
+}
+
+type ATHIntrospectResponse struct {
+	Active      bool     `json:"active"`
+	TokenType   string   `json:"token_type,omitempty"`
+	ClientID    string   `json:"client_id,omitempty"`
+	AgentID     string   `json:"agent_id,omitempty"`
+	UserID      uint64   `json:"user_id,omitempty"`
+	ProviderID  string   `json:"provider_id,omitempty"`
+	SessionID   string   `json:"session_id,omitempty"`
+	HandshakeID string   `json:"handshake_id,omitempty"`
+	Scope       string   `json:"scope,omitempty"`
+	Scopes      []string `json:"scopes,omitempty"`
+	JTI         string   `json:"jti,omitempty"`
+	ExpiresAt   int64    `json:"exp,omitempty"`
+	IssuedAt    int64    `json:"iat,omitempty"`
+	NotBefore   int64    `json:"nbf,omitempty"`
+}
+
 // ATHProxyRequest proxy API request
 type ATHProxyRequest struct {
 	Provider         string `json:"provider" binding:"required"`

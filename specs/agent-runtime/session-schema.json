@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-base.local/specs/agent-runtime/session-schema.json",
+  "title": "Agent Base Generic Session",
+  "type": "object",
+  "required": ["id", "type", "status", "participants", "policy"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable session identifier."
+    },
+    "type": {
+      "type": "string",
+      "description": "Application plugin type, for example debate, review, planning."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["created", "waiting_participants", "ready", "active", "paused", "completed", "archived", "cancelled"]
+    },
+    "owner_user_id": {
+      "type": "string"
+    },
+    "participants": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/participant"
+      }
+    },
+    "policy": {
+      "$ref": "#/$defs/sessionPolicy"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "participant": {
+      "type": "object",
+      "required": ["id", "role", "status", "scopes"],
+      "properties": {
+        "id": {"type": "string"},
+        "user_id": {"type": "string"},
+        "agent_id": {"type": "string"},
+        "agent_identity": {"type": "string", "format": "uri"},
+        "role": {"type": "string"},
+        "status": {
+          "type": "string",
+          "enum": ["invited", "pending_authorization", "ready", "active", "left", "revoked"]
+        },
+        "scopes": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "sessionPolicy": {
+      "type": "object",
+      "required": ["turn_policy", "max_turns"],
+      "properties": {
+        "turn_policy": {
+          "type": "string",
+          "enum": ["round_robin", "alternate", "moderated", "freeform"]
+        },
+        "max_turns": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "turn_timeout_seconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "allowed_message_types": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "audit_required": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

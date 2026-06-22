@@ -70,6 +70,7 @@ type UsersHandler interface {
 	ATHAuthorize(c *gin.Context)
 	ATHToken(c *gin.Context)
 	ATHRevoke(c *gin.Context)
+	ATHIntrospect(c *gin.Context)
 	ATHProxy(c *gin.Context)
 }
 

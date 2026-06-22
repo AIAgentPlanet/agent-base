@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -9,6 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PROMPTS_DIR = ROOT / "prompts"
 SKILLS_DIR = ROOT / "skills"
+SPECS_DIR = ROOT / "specs" / "agent-runtime"
 
 
 USER_SERVICE_ENDPOINTS = [
@@ -43,11 +43,59 @@ ATH_ENDPOINTS = [
     ("POST", "/api/v1/ath/authorize", "用户授权绑定", "attestation_jwt"),
     ("POST", "/api/v1/ath/token", "ATH token 交换", "client_secret"),
     ("POST", "/api/v1/ath/revoke", "ATH token 注销", "client_secret"),
+    ("POST", "/api/v1/ath/introspect", "ATH token introspection / active 状态查询", "client_secret"),
     ("POST", "/api/v1/ath/proxy", "ATH API 代理", "ath_bearer"),
     ("POST", "/api/v1/ath/audit/query", "审计记录查询", "client_secret"),
     ("POST", "/api/v1/ath/audit/verify", "审计链校验", "client_secret"),
     ("POST", "/api/v1/ath/audit/anchor/status", "锚定状态", "client_secret"),
     ("POST", "/api/v1/ath/audit/anchor/retry", "锚定重试", "client_secret"),
+]
+
+AGENT_SERVICE_ENDPOINTS = [
+    ("GET", "/healthz", "健康检查", "public"),
+    ("GET", "/api/v1/runtime/discover", "发现 agent-service MVP 能力", "public"),
+    ("POST", "/api/v1/agents", "注册外部 agent 连接档案", "mvp_no_auth"),
+    ("GET", "/api/v1/agents/:id", "查询 agent", "mvp_no_auth"),
+    ("POST", "/api/v1/connections", "注册 agent gateway connection，返回一次性 connection_token", "mvp_no_auth"),
+    ("GET", "/api/v1/connections/:id/deliveries/next", "拉取下一条 gateway delivery", "agent_connection_token"),
+    ("POST", "/api/v1/connections/:id/deliveries/:deliveryId/ack", "确认 gateway delivery 已收到", "agent_connection_token"),
+    ("GET", "/api/v1/connections/:id/ws", "WebSocket gateway：接收 delivery 并发送 delivery.ack", "agent_connection_token"),
+    ("POST", "/api/v1/sessions", "创建通用 session", "mvp_no_auth"),
+    ("GET", "/api/v1/sessions/:id", "查询 session", "mvp_no_auth"),
+    ("POST", "/api/v1/sessions/:id/participants", "加入 session", "mvp_no_auth"),
+    ("GET", "/api/v1/sessions/:id/participants/:participantId/next-turn", "获取下一轮 turn", "participant_session_token"),
+    ("POST", "/api/v1/sessions/:id/messages", "提交 session message", "participant_session_token"),
+    ("GET", "/api/v1/sessions/:id/messages", "查询 session messages", "mvp_no_auth"),
+    ("GET", "/api/v1/sessions/:id/audit", "查询审计状态；配置 ATH 后代理到 user-service", "mvp_no_auth"),
+]
+
+CONNECTION_MODES = [
+    ("https_webhook", "Agent Base calls a public HTTPS endpoint owned by the agent."),
+    ("websocket", "Agent connects outward and receives turn deliveries over a long-lived channel."),
+    ("mcp", "Agent uses Agent Base MCP tools to discover sessions, fetch turns, and submit results."),
+]
+
+SESSION_TYPES = [
+    ("debate", "Two or more user-authorized agents exchange arguments under a turn policy."),
+]
+
+RUNTIME_TOOLS = [
+    ("agent_base.discover", "Return runtime capabilities, connection modes, and session types.", "read"),
+    ("agent_base.list_session_types", "List supported session types.", "read"),
+    ("agent_base.get_session_schema", "Return schema for a session type.", "read"),
+    ("agent_base.get_audit_status", "Return ATH audit status for a session.", "read"),
+    ("agent_base.register_connection", "Register an agent gateway connection and return a connection token.", "write"),
+    ("agent_base.next_delivery", "Fetch the next gateway delivery for a connection.", "write"),
+    ("agent_base.register_agent", "Register an external agent identity and connection profile.", "write"),
+    ("agent_base.bind_agent_to_user", "Bind a verified agent to a user.", "write-planned"),
+    ("agent_base.create_session", "Create a generic runtime session.", "write"),
+    ("agent_base.join_session", "Join a session as an authorized participant.", "write"),
+    ("agent_base.get_session", "Fetch a session by id.", "read"),
+    ("agent_base.get_next_turn", "Fetch the next turn assigned to the current agent.", "write"),
+    ("agent_base.submit_message", "Submit a session message.", "write"),
+    ("agent_base.submit_artifact", "Submit a structured artifact.", "write-planned"),
+    ("agent_base.ack_delivery", "Acknowledge an async delivery.", "write"),
+    ("agent_base.revoke_session_token", "Revoke current session authorization.", "write-planned"),
 ]
 
 
@@ -75,6 +123,16 @@ def skill_path(name):
     raise SystemExit(f"Unknown skill: {name}")
 
 
+def spec_path(name):
+    if name.endswith(".json"):
+        candidate = SPECS_DIR / name
+    else:
+        candidate = SPECS_DIR / f"{name}.md"
+    if candidate.exists():
+        return candidate
+    raise SystemExit(f"Unknown runtime spec: {name}")
+
+
 def print_table(rows):
     for row in rows:
         print("\t".join(row))
@@ -87,8 +145,10 @@ def command_doctor(_args):
         ("prompts", PROMPTS_DIR),
         ("skills/agent-base", SKILLS_DIR / "agent-base" / "SKILL.md"),
         ("skills/user-service", SKILLS_DIR / "user-service" / "SKILL.md"),
+        ("specs/agent-runtime", SPECS_DIR / "README.md"),
         ("mcp/agent_base_mcp.py", ROOT / "mcp" / "agent_base_mcp.py"),
         ("services/user-service", ROOT / "services" / "user-service"),
+        ("services/agent-service", ROOT / "services" / "agent-service" / "go.mod"),
     ]
     failed = False
     for label, path in checks:
@@ -104,24 +164,30 @@ def build_context():
         "root": str(ROOT),
         "implemented": [
             "user-service: users, JWT, OAuth 2.0, ATH",
+            "agent-service: in-memory external-agent runtime MVP",
             "prompts: reusable task templates",
             "skills: agent-base and user-service guidance",
-            "cli: read-only local context tool",
-            "mcp: read-only stdio context server",
+            "cli: local context and endpoint catalog tool",
+            "mcp: stdio context server with agent-service proxy tools",
+            "agent-runtime specs: generic gateway, MCP tools, session schema, debate plugin",
         ],
         "not_yet_runtime": [
-            "general Agent Runtime",
+            "production Agent Runtime service",
             "long-running task scheduler",
-            "state-changing MCP tools",
-            "multi-agent orchestration",
+            "production-grade MCP auth confirmation and persistence",
+            "persistent multi-agent orchestration",
         ],
         "entrypoints": {
             "agent_instructions": "AGENT.md",
             "agent_base_skill": "skills/agent-base/SKILL.md",
             "user_service_skill": "skills/user-service/SKILL.md",
             "user_service": "services/user-service",
+            "agent_service": "services/agent-service",
             "mcp": "mcp/agent_base_mcp.py",
+            "runtime_specs": "specs/agent-runtime",
         },
+        "connection_modes": [name for name, _description in CONNECTION_MODES],
+        "session_types": [name for name, _description in SESSION_TYPES],
         "prompts": [path.stem for path in list_markdown_files(PROMPTS_DIR) if path.name != "README.md"],
     }
 
@@ -148,6 +214,14 @@ def command_context(args):
     print("## Prompts")
     for name in context["prompts"]:
         print(f"- {name}")
+    print()
+    print("## Connection Modes")
+    for name in context["connection_modes"]:
+        print(f"- {name}")
+    print()
+    print("## Session Types")
+    for name in context["session_types"]:
+        print(f"- {name}")
 
 
 def command_prompts(args):
@@ -172,6 +246,19 @@ def command_user_service(args):
     print_table(rows)
 
 
+def command_agent_service(args):
+    if args.agent_service_command == "endpoints":
+        print_table(AGENT_SERVICE_ENDPOINTS)
+        return
+    if args.agent_service_command == "smoke":
+        print("cd services/agent-service")
+        print("python3 scripts/debate_smoke.py --base-url http://localhost:8090")
+        return
+    command = ["go", "run", "./cmd/agent_service"]
+    print("cd services/agent-service")
+    print("AGENT_SERVICE_ADDR=:8090", " ".join(command))
+
+
 def command_mcp(args):
     command = [sys.executable, str(ROOT / "mcp" / "agent_base_mcp.py")]
     if args.format == "json":
@@ -179,6 +266,24 @@ def command_mcp(args):
         return
     print("command:", command[0])
     print("args:", " ".join(command[1:]))
+
+
+def command_runtime(args):
+    if args.runtime_command == "connection-modes":
+        print_table(CONNECTION_MODES)
+        return
+    if args.runtime_command == "session-types":
+        print_table(SESSION_TYPES)
+        return
+    if args.runtime_command == "tools":
+        print_table(RUNTIME_TOOLS)
+        return
+    if args.runtime_command == "specs":
+        for path in sorted(SPECS_DIR.iterdir()):
+            if path.is_file():
+                print(path.name)
+        return
+    print(read_text(spec_path(args.name)))
 
 
 def main(argv=None):
@@ -212,11 +317,28 @@ def main(argv=None):
     user_sub.add_parser("ath-endpoints", help="show ATH endpoints")
     user_service.set_defaults(func=command_user_service)
 
+    agent_service = subparsers.add_parser("agent-service", help="show agent-service MVP commands")
+    agent_service_sub = agent_service.add_subparsers(dest="agent_service_command", required=True)
+    agent_service_sub.add_parser("endpoints", help="show agent-service MVP endpoints")
+    agent_service_sub.add_parser("run", help="show command to run agent-service")
+    agent_service_sub.add_parser("smoke", help="show command to run debate smoke against agent-service")
+    agent_service.set_defaults(func=command_agent_service)
+
     mcp = subparsers.add_parser("mcp", help="print MCP server config")
     mcp_sub = mcp.add_subparsers(dest="mcp_command", required=True)
     mcp_config = mcp_sub.add_parser("config", help="print stdio server command")
     mcp_config.add_argument("--format", choices=["text", "json"], default="text")
     mcp.set_defaults(func=command_mcp)
+
+    runtime = subparsers.add_parser("runtime", help="show generic agent runtime contracts")
+    runtime_sub = runtime.add_subparsers(dest="runtime_command", required=True)
+    runtime_sub.add_parser("connection-modes", help="list supported agent connection modes")
+    runtime_sub.add_parser("session-types", help="list supported session types")
+    runtime_sub.add_parser("tools", help="list generic runtime MCP tool contracts")
+    runtime_sub.add_parser("specs", help="list runtime spec files")
+    runtime_show = runtime_sub.add_parser("show", help="show a runtime spec")
+    runtime_show.add_argument("name")
+    runtime.set_defaults(func=command_runtime)
 
     args = parser.parse_args(argv)
     args.func(args)

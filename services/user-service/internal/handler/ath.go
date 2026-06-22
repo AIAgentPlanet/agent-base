@@ -965,6 +965,76 @@ func (h *usersHandler) ATHRevoke(c *gin.Context) {
 	response.Success(c)
 }
 
+// ATHIntrospect returns active status and binding claims for an ATH token.
+// @Summary ATH token introspection
+// @Description Introspect an ATH access or refresh token and check revocation.
+// @Tags ath
+// @Accept json
+// @Produce json
+// @Param data body types.ATHIntrospectRequest true "introspection request"
+// @Success 200 {object} types.ATHIntrospectResponse{}
+// @Router /api/v1/ath/introspect [post]
+func (h *usersHandler) ATHIntrospect(c *gin.Context) {
+	form := &types.ATHIntrospectRequest{}
+	if err := c.ShouldBindJSON(form); err != nil {
+		response.Error(c, ecode.InvalidParams.RewriteMsg(formatValidationError(err)))
+		return
+	}
+
+	ctx := middleware.WrapCtx(c)
+	athDao := dao.NewATHAgentDao(database.GetDB())
+	agent, err := athDao.GetByClientID(ctx, form.ClientID)
+	if err != nil {
+		response.Error(c, ecode.ErrOAuthInvalidClient)
+		return
+	}
+	if form.ClientSecret != agent.ClientSecret {
+		response.Error(c, ecode.ErrOAuthInvalidClient)
+		return
+	}
+
+	claims, err := jwt.ParseATHToken(form.Token)
+	if err != nil {
+		c.JSON(http.StatusOK, types.ATHIntrospectResponse{Active: false})
+		return
+	}
+	if claims.ClientID != agent.ClientID {
+		c.JSON(http.StatusOK, types.ATHIntrospectResponse{Active: false})
+		return
+	}
+	tokenType := "access"
+	if form.TokenTypeHint == "refresh_token" || claims.Type == "ath_refresh" {
+		tokenType = "refresh"
+	}
+	revoked, err := oauth.IsTokenRevoked(ctx.(context.Context), form.Token, tokenType)
+	if err != nil {
+		logger.Error("ATH introspect IsTokenRevoked error", logger.Err(err), middleware.GCtxRequestIDField(c))
+		response.Output(c, ecode.InternalServerError.ToHTTPCode())
+		return
+	}
+	if revoked {
+		c.JSON(http.StatusOK, types.ATHIntrospectResponse{Active: false})
+		return
+	}
+
+	out := types.ATHIntrospectResponse{
+		Active: true, TokenType: claims.Type, ClientID: claims.ClientID, AgentID: claims.AgentID,
+		UserID: claims.UserID, ProviderID: claims.ProviderID, SessionID: claims.SessionID,
+		HandshakeID: claims.HandshakeID, Scope: claims.Scope, Scopes: strings.Fields(claims.Scope),
+		JTI: claims.ID,
+	}
+	if claims.ExpiresAt != nil {
+		out.ExpiresAt = claims.ExpiresAt.Unix()
+	}
+	if claims.IssuedAt != nil {
+		out.IssuedAt = claims.IssuedAt.Unix()
+	}
+	if claims.NotBefore != nil {
+		out.NotBefore = claims.NotBefore.Unix()
+	}
+	c.JSON(http.StatusOK, out)
+}
+
 // ==================== ATH Proxy ====================
 
 // ATHProxy proxies API calls with ATH authentication
